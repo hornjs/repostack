@@ -2,14 +2,14 @@
 
 name: "Repostack"
 shortDescription: "Multirepo workflow, monorepo feel."
-description: "Repostack 是一个面向多仓开发目录的视图编排工具文档站。"
-github: "bourdon/nujs"
-url: "https://repostack.example.com"
+description: "A CLI tool for orchestrating multirepo development directories."
+github: "hornjs/repostack"
+url: "https://repostack.hornjs.deno.net"
 # redirects:
 #   "/from": "/to"
 # automd: true
 landing:
-  contributors: true
+  contributors: false
   heroLinks:
     primary:
       icon: "i-heroicons-book-open"
