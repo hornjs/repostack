@@ -1,0 +1,7 @@
+.output
+dist
+node_modules
+superpowers/
+*.log
+.DS_Store
+.idea

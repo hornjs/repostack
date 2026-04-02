@@ -1,0 +1,53 @@
+{
+  "name": "repostack",
+  "version": "0.0.0",
+  "description": "Multirepo workflow, monorepo feel.",
+  "license": "MIT",
+  "type": "module",
+  "author": "Maofeng <hornjs@qq.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hornjs/repostack.git"
+  },
+  "bin": {
+    "repostack": "./bin/repostack.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "LICENSE",
+    "README.md",
+    "package.json"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "docs:build": "pnpm --dir docs build",
+    "docs:dev": "pnpm --dir docs dev",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm test && pnpm typecheck",
+    "prepare:publish": "prepare-publish --print-tree",
+    "prepare:publish:dry-run": "prepare-publish --dry-run",
+    "release": "bumpp",
+    "prepublishOnly": "pnpm run build && pnpm run prepare:publish"
+  },
+  "dependencies": {
+    "cac": "^7.0.0",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "bumpp": "^11.0.1",
+    "prepare-publish": "latest",
+    "tsdown": "^0.21.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}
