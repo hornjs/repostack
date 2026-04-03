@@ -1,6 +1,7 @@
 import { format } from "node:util";
 import { isCancel, multiselect, select, spinner } from "@clack/prompts";
 import { cac, type CAC } from "cac";
+import isUnicodeSupported from "is-unicode-supported";
 import pico from "picocolors";
 import packageJson from "../package.json";
 import { pull } from "./commands/pull";
@@ -14,6 +15,11 @@ import { remove } from "./commands/remove";
 import { doctor } from "./commands/doctor";
 import { listUsers, setUser, unsetUser } from "./commands/users";
 import { loadConfigWithUser, loadConfig, repostackrcExists } from "./config";
+
+const unicodeOr = (c: string, fallback: string) => (isUnicodeSupported() ? c : fallback);
+const S_ERROR = unicodeOr("■", "x");
+const S_WARN = unicodeOr("▲", "!");
+const S_INFO = unicodeOr("●", "•");
 
 export type MainOptions = {
   args: string[];
@@ -220,13 +226,13 @@ function createCLI(options: {
       for (const issue of result.issues) {
         switch (issue.type) {
           case "error":
-            stderr.write(`${colors.red("✗")} ${issue.message}\n`);
+            stderr.write(`${colors.red(S_ERROR)} ${issue.message}\n`);
             break;
           case "warning":
-            stdout.write(`${colors.yellow("⚠")} ${issue.message}\n`);
+            stdout.write(`${colors.yellow(S_WARN)} ${issue.message}\n`);
             break;
           case "info":
-            stdout.write(`${colors.green("✓")} ${issue.message}\n`);
+            stdout.write(`${colors.green(S_INFO)} ${issue.message}\n`);
             break;
         }
       }

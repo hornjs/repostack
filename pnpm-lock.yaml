@@ -14,6 +14,9 @@ importers:
       cac:
         specifier: ^7.0.0
         version: 7.0.0
+      is-unicode-supported:
+        specifier: ^2.1.0
+        version: 2.1.0
       picocolors:
         specifier: ^1.1.1
         version: 1.1.1
@@ -550,6 +553,10 @@ packages:
   ip-address@10.1.0:
     resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
     engines: {node: '>= 12'}
+
+  is-unicode-supported@2.1.0:
+    resolution: {integrity: sha512-mE00Gnza5EEB3Ds0HfMyllZzbBrmLOX3vfWoj9A9PEnTfratQ/BcaJOuMhnkhjXvb2+FkY3VuHqtAGpTPmglFQ==}
+    engines: {node: '>=18'}
 
   isexe@4.0.0:
     resolution: {integrity: sha512-FFUtZMpoZ8RqHS3XeXEmHWLA4thH+ZxCv2lOiPIn1Xc7CxrqhWzNSDzD+/chS/zbYezmiwWLdQC09JdQKmthOw==}
@@ -1644,6 +1651,8 @@ snapshots:
   ini@6.0.0: {}
 
   ip-address@10.1.0: {}
+
+  is-unicode-supported@2.1.0: {}
 
   isexe@4.0.0: {}
 

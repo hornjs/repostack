@@ -193,7 +193,7 @@ export async function doctor(
         if (await isGitRepo(fullPath)) {
           const relativePath = fullPath.slice(root.length + 1);
           issues.push({
-            type: "info",
+            type: "warning",
             message: `Found untracked git repository: ${relativePath} (not in repostack.yaml)`,
           });
         } else {
