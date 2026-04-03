@@ -1,4 +1,5 @@
 import { format } from "node:util";
+import { isCancel, multiselect, select, spinner } from "@clack/prompts";
 import { cac, type CAC } from "cac";
 import pico from "picocolors";
 import packageJson from "../package.json";
@@ -291,10 +292,11 @@ function createCLI(options: {
   // Sync command
   cli
     .command("sync", "Fetch and checkout revisions from the current lock file")
-    .action(async () => {
+    .option("-y, --yes", "Skip confirmation prompts for uncommitted changes")
+    .action(async (opts?: { yes?: boolean }) => {
       debug("command=sync");
       const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-      await sync(process.cwd(), config, { onDebug: debug });
+      await sync(process.cwd(), config, { onDebug: debug, yes: opts?.yes });
       stdout.write(`${colors.green("Synchronized stack")}\n`);
     });
 

@@ -1,20 +1,7 @@
-import { createInterface } from "node:readline";
+import { confirm, isCancel } from "@clack/prompts";
 import { join } from "node:path";
 import { loadConfig, loadConfigWithUser, removeRepo, writeConfig } from "../config";
 import { snapshot } from "./snapshot";
-
-function prompt(message: string): Promise<string> {
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) => {
-    rl.question(message, (answer) => {
-      rl.close();
-      resolve(answer.trim().toLowerCase());
-    });
-  });
-}
 
 export async function remove(
   root: string,
@@ -39,8 +26,11 @@ export async function remove(
 
   // Confirm removal
   if (!options.yes) {
-    const answer = await prompt(`Remove "${repoName}" from repostack? (y/N) `);
-    if (answer !== "y" && answer !== "yes") {
+    const answer = await confirm({
+      message: `Remove "${repoName}" from repostack?`,
+      initialValue: false,
+    });
+    if (isCancel(answer) || !answer) {
       throw new Error("Aborted: user declined to remove repo");
     }
   }

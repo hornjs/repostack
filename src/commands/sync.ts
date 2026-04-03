@@ -2,8 +2,9 @@ import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import YAML from "yaml";
+import { confirm, isCancel } from "@clack/prompts";
 import type { RepostackConfig, RepostackLock } from "../types";
-import { checkoutRevision, fetchRepo, pathExists } from "../git";
+import { checkoutRevision, fetchRepo, isDirty, pathExists } from "../git";
 import { pull } from "./pull";
 import { snapshot } from "./snapshot";
 
@@ -44,7 +45,7 @@ export async function loadLock(
 export async function sync(
   root: string,
   config: RepostackConfig,
-  options: { onDebug?: (message: string) => void } = {},
+  options: { onDebug?: (message: string) => void; yes?: boolean } = {},
 ): Promise<RepostackLock> {
   const debug = options.onDebug ?? (() => {});
   debug(`sync: root=${root} repos=${config.repos.length}`);
@@ -60,6 +61,22 @@ export async function sync(
     const pinned = lock?.repos[repo.name]?.revision;
     if (pinned) {
       debug(`sync: checking out ${repo.name} @ ${pinned.slice(0, 12)}`);
+
+      const dirty = await isDirty(cwd);
+      if (dirty) {
+        if (options.yes) {
+          debug(`sync: ${repo.name} has uncommitted changes, proceeding because --yes is set`);
+        } else {
+          const answer = await confirm({
+            message: `Repo "${repo.name}" has uncommitted changes. Checkout ${pinned.slice(0, 12)} anyway?`,
+            initialValue: false,
+          });
+          if (isCancel(answer) || !answer) {
+            throw new Error(`Aborted: user declined to checkout ${repo.name}`);
+          }
+        }
+      }
+
       await checkoutRevision(cwd, pinned);
     }
   }

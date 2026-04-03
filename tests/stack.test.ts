@@ -80,7 +80,7 @@ describe("stack state", () => {
       branch: "main",
     });
 
-    const lock = await sync(root, config);
+    const lock = await sync(root, config, { yes: true });
 
     expect(lock.repos.evt.revision).toMatch(/[0-9a-f]{7,40}/);
   });

@@ -1,22 +1,9 @@
-import { createInterface } from "node:readline";
+import { confirm, isCancel } from "@clack/prompts";
 import { join } from "node:path";
 import { loadConfig, loadConfigWithUser, useRepo, writeConfig } from "../config";
 import { isGitRepo, initGitRepo, pathExists } from "../git";
 import { ensureGitignore } from "./init";
 import { snapshot } from "./snapshot";
-
-function prompt(message: string): Promise<string> {
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) => {
-    rl.question(message, (answer) => {
-      rl.close();
-      resolve(answer.trim().toLowerCase());
-    });
-  });
-}
 
 export async function use(
   root: string,
@@ -24,10 +11,10 @@ export async function use(
   options: { yes?: boolean; onDebug?: (message: string) => void } = {},
 ): Promise<void> {
   const debug = options.onDebug ?? (() => {});
-  
+
   // Check user if defined (throws if users exist but none selected)
   await loadConfigWithUser(root, { onDebug: debug });
-  
+
   // Use base config for modification
   const config = await loadConfig(root);
   const fullPath = join(root, repoPath);
@@ -41,8 +28,11 @@ export async function use(
     if (options.yes) {
       debug("use: auto-creating directory (yes mode)");
     } else {
-      const answer = await prompt(`Path "${repoPath}" does not exist. Create it? (y/N) `);
-      if (answer !== "y" && answer !== "yes") {
+      const answer = await confirm({
+        message: `Path "${repoPath}" does not exist. Create it?`,
+        initialValue: false,
+      });
+      if (isCancel(answer) || !answer) {
         throw new Error("Aborted: user declined to create directory");
       }
     }
@@ -56,19 +46,24 @@ export async function use(
       debug("use: auto-initializing git repo (yes mode)");
       await initGitRepo(fullPath);
     } else {
-      const answer = await prompt(`"${repoPath}" is not a git repository. Initialize it? (Y/n) `);
-      if (answer === "" || answer === "y" || answer === "yes") {
-        await initGitRepo(fullPath);
-      } else {
+      const answer = await confirm({
+        message: `"${repoPath}" is not a git repository. Initialize it?`,
+        initialValue: true,
+      });
+      if (isCancel(answer) || !answer) {
         throw new Error("Aborted: user declined to initialize git repository");
       }
+      await initGitRepo(fullPath);
     }
   }
 
   // Confirm adding to stack
   if (!options.yes) {
-    const answer = await prompt(`Add "${repoPath}" to repostack? (Y/n) `);
-    if (answer !== "" && answer !== "y" && answer !== "yes") {
+    const answer = await confirm({
+      message: `Add "${repoPath}" to repostack?`,
+      initialValue: true,
+    });
+    if (isCancel(answer) || !answer) {
       throw new Error("Aborted: user declined to add repo");
     }
   }
