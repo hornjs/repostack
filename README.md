@@ -11,6 +11,7 @@
 - 列出当前 repo 状态
 - 在多个 repo 中批量执行命令
 - 为整个 stack 生成快照
+- 交互式 CLI 提示（基于 `@clack/prompts`）
 
 设计文档见：
 
@@ -21,12 +22,12 @@
 - `repostack init` - Initialize stack
 - `repostack use <path>` - Add repo to stack
 - `repostack remove <name>` - Remove repo from stack
-- `repostack download` - Clone missing repos
-- `repostack sync` - Sync to locked revisions
+- `repostack pull` - Clone missing repos
+- `repostack sync` - Sync to locked revisions (with dirty-repo protection)
 - `repostack list` - Show repo status
-- `repostack run [options] -- <command>` - Run command across repos
+- `repostack run [options] -- <command>` - Run command across repos (interactive repo selection in TTY)
 - `repostack snapshot` - Record current state
-- `repostack user <command>` - Manage user configuration
+- `repostack users [command]` - Manage user configuration (interactive menu in TTY)
 - `repostack doctor` - Diagnose stack health
 
 ## Config
