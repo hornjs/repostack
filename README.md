@@ -6,16 +6,44 @@
 
 ## Commands
 
-- `repostack init` - Initialize stack
-- `repostack use <path>` - Add repo to stack
-- `repostack remove <name>` - Remove repo from stack
-- `repostack pull` - Clone missing repos
-- `repostack sync` - Sync to locked revisions (with dirty-repo protection)
-- `repostack list` - Show repo status
-- `repostack run [options] -- <command>` - Run command across repos (interactive repo selection in TTY)
-- `repostack snapshot` - Record current state
-- `repostack users [command]` - Manage user configuration (interactive menu in TTY)
-- `repostack doctor` - Diagnose stack health
+```text
+$ repostack --help
+repostack/0.0.0
+
+Usage:
+  $ repostack <command> [options]
+
+Commands:
+  init                    Initialize repostack.yaml in the current directory
+  use [path]              Register a repo in the current stack
+  remove <name>           Remove a repo from the current stack
+  doctor                  Diagnose stack configuration and health
+  whoami                  Show the current user
+  users [command] [name]  Manage user configuration for this stack
+  pull                    Clone repos that are declared but missing locally
+  sync                    Fetch and checkout revisions from the current lock file
+  list                    Show the current branch, revision, and dirty state for each repo
+  run                     Run a shell command across selected repos
+  snapshot                Write repostack.lock.yaml from current repo revisions
+
+For more info, run any command with the `--help` flag:
+  $ repostack init --help
+  $ repostack use --help
+  $ repostack remove --help
+  $ repostack doctor --help
+  $ repostack whoami --help
+  $ repostack users --help
+  $ repostack pull --help
+  $ repostack sync --help
+  $ repostack list --help
+  $ repostack run --help
+  $ repostack snapshot --help
+
+Options:
+  -d, --debug    Display orchestration debug output
+  -v, --version  Display version number
+  -h, --help     Display this message
+```
 
 ## Config
 
