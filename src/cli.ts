@@ -2,16 +2,16 @@ import { format } from "node:util";
 import { cac, type CAC } from "cac";
 import pico from "picocolors";
 import packageJson from "../package.json";
-import { cloneMissingRepos } from "./commands/download";
-import { initStack } from "./commands/init";
-import { listRepos } from "./commands/list";
-import { runInRepos } from "./commands/run";
-import { writeSnapshot } from "./commands/snapshot";
-import { syncStack } from "./commands/sync";
-import { useRepoCommand } from "./commands/use";
-import { removeRepoCommand } from "./commands/remove";
-import { runDoctor } from "./commands/doctor";
-import { listUsers, setUser, unsetUser } from "./commands/user";
+import { pull } from "./commands/pull";
+import { init } from "./commands/init";
+import { list } from "./commands/list";
+import { run } from "./commands/run";
+import { snapshot } from "./commands/snapshot";
+import { sync } from "./commands/sync";
+import { use } from "./commands/use";
+import { remove } from "./commands/remove";
+import { doctor } from "./commands/doctor";
+import { listUsers, setUser, unsetUser } from "./commands/users";
 import { loadConfigWithUser, loadConfig, repostackrcExists } from "./config";
 
 export type MainOptions = {
@@ -130,7 +130,7 @@ function createCLI(options: {
     .option("-y, --yes", "Auto-initialize git repo if not exists")
     .action(async (opts?: { yes?: boolean }) => {
       debug(`command=init yes=${opts?.yes ?? false}`);
-      const result = await initStack(process.cwd(), { onDebug: debug, yes: opts?.yes });
+      const result = await init(process.cwd(), { onDebug: debug, yes: opts?.yes });
       if (result.configCreated) {
         stdout.write(`${colors.green("Initialized repostack.yaml")}\n`);
       } else {
@@ -155,7 +155,7 @@ function createCLI(options: {
         return;
       }
       debug(`command=use repoPath=${repoPath} yes=${opts?.yes ?? false}`);
-      await useRepoCommand(process.cwd(), repoPath, { yes: opts?.yes, onDebug: debug });
+      await use(process.cwd(), repoPath, { yes: opts?.yes, onDebug: debug });
       stdout.write(`${colors.green("Added repo:")} ${repoPath}\n`);
     });
 
@@ -165,7 +165,7 @@ function createCLI(options: {
     .option("-y, --yes", "Skip confirmation prompt")
     .action(async (repoName?: string, opts?: { yes?: boolean }) => {
       debug(`command=remove repoName=${repoName} yes=${opts?.yes ?? false}`);
-      await removeRepoCommand(process.cwd(), repoName!, { yes: opts?.yes, onDebug: debug });
+      await remove(process.cwd(), repoName!, { yes: opts?.yes, onDebug: debug });
       stdout.write(`${colors.green("Removed repo:")} ${repoName}\n`);
     });
 
@@ -174,7 +174,7 @@ function createCLI(options: {
     .command("doctor", "Diagnose stack configuration and health")
     .action(async () => {
       debug("command=doctor");
-      const result = await runDoctor(process.cwd(), { onDebug: debug });
+      const result = await doctor(process.cwd(), { onDebug: debug });
 
       for (const issue of result.issues) {
         switch (issue.type) {
@@ -284,7 +284,7 @@ function createCLI(options: {
     .action(async () => {
       debug("command=pull");
       const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-      await cloneMissingRepos(process.cwd(), config, { onDebug: debug });
+      await pull(process.cwd(), config, { onDebug: debug });
       stdout.write(`${colors.green("Pulled missing repos")}\n`);
     });
 
@@ -294,7 +294,7 @@ function createCLI(options: {
     .action(async () => {
       debug("command=sync");
       const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-      await syncStack(process.cwd(), config, { onDebug: debug });
+      await sync(process.cwd(), config, { onDebug: debug });
       stdout.write(`${colors.green("Synchronized stack")}\n`);
     });
 
@@ -307,7 +307,7 @@ function createCLI(options: {
       if (user) {
         stdout.write(`${colors.dim(`[user: ${user}]`)}\n`);
       }
-      const rows = await listRepos(process.cwd(), config, undefined, { onDebug: debug });
+      const rows = await list(process.cwd(), config, undefined, { onDebug: debug });
 
       for (const row of rows) {
         const status = row.dirty ? colors.yellow("dirty") : colors.green("clean");
@@ -335,7 +335,7 @@ function createCLI(options: {
       }
 
       const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-      const result = await runInRepos(process.cwd(), config, {
+      const result = await run(process.cwd(), config, {
         command: command.join(" "),
         repos: splitCommaList(opts.repos),
         view: opts.view,
@@ -365,7 +365,7 @@ function createCLI(options: {
     .action(async () => {
       debug("command=snapshot");
       const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-      await writeSnapshot(process.cwd(), config, { onDebug: debug });
+      await snapshot(process.cwd(), config, { onDebug: debug });
       stdout.write(`${colors.green("Wrote repostack.lock.yaml")}\n`);
     });
 

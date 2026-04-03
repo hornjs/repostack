@@ -4,8 +4,8 @@ import { join } from "node:path";
 import YAML from "yaml";
 import type { RepostackConfig, RepostackLock } from "../types";
 import { checkoutRevision, fetchRepo, pathExists } from "../git";
-import { cloneMissingRepos } from "./download";
-import { writeSnapshot } from "./snapshot";
+import { pull } from "./pull";
+import { snapshot } from "./snapshot";
 
 function calculateChecksum(lock: Omit<RepostackLock, "checksum">): string {
   const content = JSON.stringify(lock, Object.keys(lock).sort());
@@ -41,7 +41,7 @@ export async function loadLock(
   return lock;
 }
 
-export async function syncStack(
+export async function sync(
   root: string,
   config: RepostackConfig,
   options: { onDebug?: (message: string) => void } = {},
@@ -49,7 +49,7 @@ export async function syncStack(
   const debug = options.onDebug ?? (() => {});
   debug(`sync: root=${root} repos=${config.repos.length}`);
 
-  await cloneMissingRepos(root, config, options);
+  await pull(root, config, options);
   const lock = await loadLock(root, options);
   debug(`sync: lock file ${lock ? "found" : "not found"}`);
 
@@ -64,5 +64,5 @@ export async function syncStack(
     }
   }
 
-  return writeSnapshot(root, config, options);
+  return snapshot(root, config, options);
 }

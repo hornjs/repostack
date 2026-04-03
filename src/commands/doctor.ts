@@ -15,7 +15,7 @@ export type DoctorResult = {
   hasWarnings: boolean;
 };
 
-export async function runDoctor(
+export async function doctor(
   root: string,
   options: { onDebug?: (message: string) => void } = {},
 ): Promise<DoctorResult> {

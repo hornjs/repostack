@@ -5,7 +5,7 @@ import YAML from "yaml";
 import type { RepostackConfig, RepostackLock } from "../types";
 import { getCurrentBranch, getHeadRevision } from "../git";
 
-export { listRepos } from "./list";
+export { list as listRepos } from "./list";
 
 function calculateChecksum(lock: Omit<RepostackLock, "checksum">): string {
   const content = JSON.stringify(lock, Object.keys(lock).sort());
@@ -41,7 +41,7 @@ export async function buildSnapshot(
   return { ...lock, checksum };
 }
 
-export async function writeSnapshot(
+export async function snapshot(
   root: string,
   config: RepostackConfig,
   options: { onDebug?: (message: string) => void } = {},

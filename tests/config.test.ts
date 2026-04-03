@@ -10,9 +10,9 @@ import {
   useRepo,
   writeConfig,
 } from "../src/config";
-import { initStack } from "../src/commands/init";
-import { useRepoCommand } from "../src/commands/use";
-import { removeRepoCommand } from "../src/commands/remove";
+import { init } from "../src/commands/init";
+import { use } from "../src/commands/use";
+import { remove } from "../src/commands/remove";
 
 describe("config", () => {
   it("creates a default config file", async () => {
@@ -71,7 +71,7 @@ describe("config", () => {
   it("initializes repostack.yaml when missing", async () => {
     const root = await createTempDir("repostack-init-");
 
-    await initStack(root);
+    await init(root);
     const loaded = await loadConfig(root);
 
     expect(loaded.version).toBe(1);
@@ -83,7 +83,7 @@ describe("config", () => {
     await createRepoFixture(root, "evt", "@hornjs/evt");
     await writeConfig(join(root, "repostack.yaml"), createInitialConfig());
 
-    await useRepoCommand(root, "evt", { yes: true });
+    await use(root, "evt", { yes: true });
     const loaded = await loadConfig(root);
 
     expect(loaded.repos).toHaveLength(1);
@@ -103,7 +103,7 @@ describe("config", () => {
     await writeJson(join(repoDir, "package.json"), { name: "newrepo", version: "0.0.0" });
 
     // Use --yes to auto-initialize
-    await useRepoCommand(root, "newrepo", { yes: true });
+    await use(root, "newrepo", { yes: true });
 
     // Verify git was initialized
     const gitDir = join(repoDir, ".git");
@@ -141,7 +141,7 @@ describe("config", () => {
     config.repos.push({ name: "evt", path: "evt", source: "git@example.com/evt.git", branch: "main" });
     await writeConfig(join(root, "repostack.yaml"), config);
 
-    await removeRepoCommand(root, "evt", { yes: true });
+    await remove(root, "evt", { yes: true });
     const loaded = await loadConfig(root);
 
     expect(loaded.repos).toHaveLength(0);

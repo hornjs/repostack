@@ -2,7 +2,7 @@ import { join } from "node:path";
 import type { RepostackConfig } from "../types";
 import { cloneRepo, pathExists } from "../git";
 
-export async function cloneMissingRepos(
+export async function pull(
   root: string,
   config: RepostackConfig,
   options: { onDebug?: (message: string) => void } = {},

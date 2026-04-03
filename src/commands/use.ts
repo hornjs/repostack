@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { loadConfig, loadConfigWithUser, useRepo, writeConfig } from "../config";
 import { isGitRepo, initGitRepo, pathExists } from "../git";
 import { ensureGitignore } from "./init";
-import { writeSnapshot } from "./snapshot";
+import { snapshot } from "./snapshot";
 
 function prompt(message: string): Promise<string> {
   const rl = createInterface({
@@ -18,7 +18,7 @@ function prompt(message: string): Promise<string> {
   });
 }
 
-export async function useRepoCommand(
+export async function use(
   root: string,
   repoPath: string,
   options: { yes?: boolean; onDebug?: (message: string) => void } = {},
@@ -80,7 +80,7 @@ export async function useRepoCommand(
 
   // Auto-snapshot after adding repo
   debug("use: auto-snapshotting");
-  await writeSnapshot(root, next, { onDebug: debug });
+  await snapshot(root, next, { onDebug: debug });
   debug("use: snapshot written");
 
   // Ensure .gitignore has .repostackrc

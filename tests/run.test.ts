@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createInitialConfig } from "../src/config";
-import { runInRepos } from "../src/commands/run";
+import { run } from "../src/commands/run";
 import { createRepoFixture, createTempDir } from "./helpers";
 
 describe("run", () => {
@@ -20,7 +20,7 @@ describe("run", () => {
     await writeFile(join(root, "evt", "FLAG"), "evt\n");
     await writeFile(join(root, "fest", "FLAG"), "fest\n");
 
-    const result = await runInRepos(root, config, {
+    const result = await run(root, config, {
       command: "node -e \"process.stdout.write(require('node:fs').readFileSync('FLAG', 'utf8'))\"",
       tags: ["runtime"],
       continueOnError: false,
@@ -45,7 +45,7 @@ describe("run", () => {
     const logFile = join(root, "events.log");
     const command = `node -e 'const fs = require("node:fs"); const path = require("node:path"); const logFile = ${JSON.stringify(logFile)}; const name = path.basename(process.cwd()); fs.appendFileSync(logFile, "start:" + name + "\\n"); setTimeout(() => { fs.appendFileSync(logFile, "end:" + name + "\\n"); }, 200);'`;
 
-    await runInRepos(root, config, {
+    await run(root, config, {
       command,
       tags: ["runtime"],
       continueOnError: false,

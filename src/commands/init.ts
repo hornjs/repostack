@@ -1,6 +1,6 @@
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createInitialConfig, writeConfig } from "../config";
+import { createInitialConfig, repostackrcExists, writeConfig } from "../config";
 import { initGitRepo, isGitRepo } from "../git";
 
 const REPOSTACK_GITIGNORE = `# Repostack user configuration
@@ -35,7 +35,7 @@ export async function ensureGitignore(root: string): Promise<boolean> {
   }
 }
 
-export async function initStack(
+export async function init(
   root: string,
   options: { onDebug?: (message: string) => void; yes?: boolean } = {},
 ): Promise<{ configCreated: boolean; gitInitialized: boolean; gitignoreUpdated: boolean }> {
@@ -71,8 +71,10 @@ export async function initStack(
     }
   }
 
-  // Update .gitignore
-  const gitignoreUpdated = await ensureGitignore(root);
+  // Update .gitignore only if .repostackrc exists
+  const rcExists = await repostackrcExists(root);
+  debug(`init: repostackrcExists=${rcExists}`);
+  const gitignoreUpdated = rcExists ? await ensureGitignore(root) : false;
   debug(`init: gitignoreUpdated=${gitignoreUpdated}`);
 
   return { configCreated, gitInitialized, gitignoreUpdated };

@@ -14,7 +14,7 @@ export type RunOptions = {
   onDebug?: (message: string) => void;
 };
 
-export async function runInRepos(root: string, config: RepostackConfig, options: RunOptions) {
+export async function run(root: string, config: RepostackConfig, options: RunOptions) {
   const repos = resolveRepoSelection(config, {
     repos: options.repos,
     view: options.view,

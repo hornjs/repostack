@@ -11,7 +11,7 @@ export type RepoListRow = {
   tags: string[];
 };
 
-export async function listRepos(
+export async function list(
   root: string,
   config: RepostackConfig,
   repos: RepoEntry[] = config.repos,

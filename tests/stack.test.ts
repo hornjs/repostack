@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { createInitialConfig, writeConfig } from "../src/config";
 import { buildSnapshot, listRepos } from "../src/commands/snapshot";
-import { cloneMissingRepos } from "../src/commands/download";
-import { syncStack } from "../src/commands/sync";
+import { pull } from "../src/commands/pull";
+import { sync } from "../src/commands/sync";
 import { createRepoFixture, createTempDir } from "./helpers";
 
 const execFileAsync = promisify(execFile);
@@ -63,7 +63,7 @@ describe("stack state", () => {
       branch: "master",
     });
 
-    await cloneMissingRepos(root, config);
+    await pull(root, config);
     const rows = await listRepos(root, config);
 
     expect(rows[0].name).toBe("evt");
@@ -80,7 +80,7 @@ describe("stack state", () => {
       branch: "main",
     });
 
-    const lock = await syncStack(root, config);
+    const lock = await sync(root, config);
 
     expect(lock.repos.evt.revision).toMatch(/[0-9a-f]{7,40}/);
   });

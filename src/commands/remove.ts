@@ -1,7 +1,7 @@
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import { loadConfig, loadConfigWithUser, removeRepo, writeConfig } from "../config";
-import { writeSnapshot } from "./snapshot";
+import { snapshot } from "./snapshot";
 
 function prompt(message: string): Promise<string> {
   const rl = createInterface({
@@ -16,7 +16,7 @@ function prompt(message: string): Promise<string> {
   });
 }
 
-export async function removeRepoCommand(
+export async function remove(
   root: string,
   repoName: string,
   options: { yes?: boolean; onDebug?: (message: string) => void } = {},
@@ -52,6 +52,6 @@ export async function removeRepoCommand(
 
   // Auto-snapshot after removing repo
   debug("remove: auto-snapshotting");
-  await writeSnapshot(root, next, { onDebug: debug });
+  await snapshot(root, next, { onDebug: debug });
   debug("remove: snapshot written");
 }
