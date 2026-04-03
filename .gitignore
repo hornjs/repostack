@@ -5,3 +5,4 @@ superpowers/
 *.log
 .DS_Store
 .idea
+.prepare-publish/

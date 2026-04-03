@@ -1,5 +1,4 @@
-#!/usr/bin/env node
-import { main } from "../dist/cli.mjs";
+import { main } from "./cli";
 
 const code = await main({
   args: process.argv.slice(2),

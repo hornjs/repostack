@@ -1,0 +1,8 @@
+name = "repostack-docs"
+compatibility_date = "2026-04-03"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "repostack-docs-db"
+database_id = "c816d45e-56c8-4ae3-bb02-f247858f5ea7"

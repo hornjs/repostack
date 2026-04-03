@@ -5,15 +5,15 @@
   "license": "MIT",
   "type": "module",
   "author": "Maofeng <hornjs@qq.com>",
+  "homepage": "https://repostack.pages.dev",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hornjs/repostack.git"
   },
   "bin": {
-    "repostack": "./bin/repostack.mjs"
+    "repostack": "./dist/index.mjs"
   },
   "files": [
-    "bin",
     "dist",
     "LICENSE",
     "README.md",

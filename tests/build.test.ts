@@ -4,13 +4,13 @@ import config from "../tsdown.config";
 describe("build", () => {
   it("uses the CLI entry as the build input", () => {
     expect(config).toMatchObject({
-      entry: ["./src/cli.ts"],
+      entry: ["./src/index.ts"],
     });
   });
 
-  it("uses the default dts generator without tsgo", () => {
+  it("does not emit declaration files", () => {
     expect(config).toMatchObject({
-      dts: true,
+      dts: false,
     });
   });
 });
