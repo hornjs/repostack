@@ -2,10 +2,10 @@
   "name": "docs",
   "private": true,
   "scripts": {
-    "dev": "nudocs dev",
-    "build": "nudocs build"
+    "dev": "undocs dev",
+    "build": "undocs build"
   },
   "devDependencies": {
-    "nudocs": "latest"
+    "undocs": "latest"
   }
 }
