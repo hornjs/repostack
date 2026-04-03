@@ -63,7 +63,7 @@ async function withPatchedConsole<T>(
   }
 }
 
-// Interactive users mode (simplified text-based)
+// Interactive users mode
 async function runInteractiveUsers(
   root: string,
   options: {
@@ -93,19 +93,59 @@ async function runInteractiveUsers(
 
   const userNames = Object.keys(baseConfig.users!);
 
-  if (currentUser) {
-    stdout.write(`${colors.green(`Current user:`)} ${currentUser}\n`);
-  } else {
-    stdout.write(`${colors.dim("No user selected.")}\n`);
+  // Non-TTY fallback to plain text
+  if (!stdout.isTTY) {
+    if (currentUser) {
+      stdout.write(`${colors.green(`Current user:`)} ${currentUser}\n`);
+    } else {
+      stdout.write(`${colors.dim("No user selected.")}\n`);
+    }
+    stdout.write(`\n${colors.dim("Available users:")} ${userNames.join(", ")}\n`);
+    stdout.write(`\nCommands:\n`);
+    stdout.write(`  repostack users ls             List users\n`);
+    stdout.write(`  repostack users su <name>      Switch to user\n`);
+    stdout.write(`  repostack users add <name>     Add user (edit config)\n`);
+    stdout.write(`  repostack users rm             Unset user\n`);
+    return;
   }
 
-  stdout.write(`\n${colors.dim("Available users:")} ${userNames.join(", ")}\n`);
-  stdout.write(`\nCommands:\n`);
-  stdout.write(`  repostack whoami               Show current user\n`);
-  stdout.write(`  repostack users ls             List users\n`);
-  stdout.write(`  repostack users su <name>      Switch to user\n`);
-  stdout.write(`  repostack users add <name>     Add user (edit config)\n`);
-  stdout.write(`  repostack users rm             Unset user\n`);
+  // TTY interactive menu
+  const action = await select({
+    message: currentUser ? `Current user: ${currentUser}` : "No user selected",
+    options: [
+      { value: "ls", label: "List users" },
+      { value: "su", label: "Switch user" },
+      { value: "rm", label: "Unset user" },
+    ],
+  });
+
+  if (isCancel(action)) return;
+
+  switch (action) {
+    case "ls": {
+      if (userNames.length === 0) {
+        stdout.write(`${colors.dim("No users defined in this stack.")}\n`);
+      } else {
+        stdout.write(`Available users: ${userNames.join(", ")}\n`);
+      }
+      break;
+    }
+    case "su": {
+      const picked = await select({
+        message: "Select user to switch to",
+        options: userNames.map((u) => ({ value: u, label: u })),
+      });
+      if (isCancel(picked) || typeof picked !== "string") return;
+      await setUser(root, picked);
+      stdout.write(`${colors.green(`Switched to user: ${picked}`)}\n`);
+      break;
+    }
+    case "rm": {
+      await unsetUser(root);
+      stdout.write(`${colors.green("Unset user. Using default configuration.")}\n`);
+      break;
+    }
+  }
 }
 
 // Create CLI instance with all commands registered
@@ -244,9 +284,28 @@ function createCLI(options: {
 
         case "su": {
           if (!name) {
-            stderr.write(`${colors.red("Missing user name. Usage: repostack users su <name>")}\n`);
-            onExitCode(1);
-            return;
+            if (stdout.isTTY) {
+              const { users } = await listUsers(cwd);
+              if (users.length === 0) {
+                stderr.write(`${colors.red("No users defined.")}\n`);
+                onExitCode(1);
+                return;
+              }
+              const picked = await select({
+                message: "Select user to switch to",
+                options: users.map((u) => ({ value: u, label: u })),
+              });
+              if (isCancel(picked) || typeof picked !== "string") {
+                stderr.write(`${colors.red("Aborted.")}\n`);
+                onExitCode(1);
+                return;
+              }
+              name = picked;
+            } else {
+              stderr.write(`${colors.red("Missing user name. Usage: repostack users su <name>")}\n`);
+              onExitCode(1);
+              return;
+            }
           }
           await setUser(cwd, name);
           stdout.write(`${colors.green(`Switched to user: ${name}`)}\n`);
@@ -264,8 +323,7 @@ function createCLI(options: {
           break;
         }
 
-        case "rm":
-        case "unset": {
+        case "rm": {
           await unsetUser(cwd);
           stdout.write(`${colors.green("Unset user. Using default configuration.")}\n`);
           break;
@@ -337,16 +395,61 @@ function createCLI(options: {
       }
 
       const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
+
+      let selectedRepos = splitCommaList(opts.repos);
+      const selectedView = opts.view;
+
+      // Interactive repo selection in TTY when no repos or view provided
+      if (!selectedRepos && !selectedView) {
+        if (stdout.isTTY && config.repos.length > 0) {
+          const picked = await multiselect({
+            message: "Select repos to run the command in",
+            options: config.repos.map((r) => ({
+              value: r.name,
+              label: r.name,
+              hint: r.tags?.join(", ") || undefined,
+            })),
+            required: true,
+          });
+          if (isCancel(picked) || !Array.isArray(picked) || picked.length === 0) {
+            stderr.write(`${colors.red("No repos selected. Aborted.")}\n`);
+            onExitCode(1);
+            return;
+          }
+          selectedRepos = picked as string[];
+        } else if (config.repos.length === 0) {
+          stderr.write(`${colors.red("No repos defined in this stack.")}\n`);
+          onExitCode(1);
+          return;
+        } else {
+          stderr.write(`${colors.red("Missing --repos or --view for non-interactive environment.")}\n`);
+          onExitCode(1);
+          return;
+        }
+      }
+
+      const spin = stdout.isTTY ? spinner() : null;
+      spin?.start("Preparing...");
+
       const result = await run(process.cwd(), config, {
         command: command.join(" "),
-        repos: splitCommaList(opts.repos),
-        view: opts.view,
+        repos: selectedRepos,
+        view: selectedView,
         tags: splitCommaList(opts.tags),
         concurrency: config.settings.concurrency,
         continueOnError: config.settings.continueOnError,
         debug: Boolean(cli.options.debug),
         onDebug: debug,
+        onRepoStart: (repoName) => {
+          spin?.message(`Running in ${repoName}...`);
+        },
+        onRepoDone: (repoName, exitCode) => {
+          const status = exitCode === 0 ? colors.green("done") : colors.red("failed");
+          spin?.message(`${repoName}: ${status}`);
+        },
       });
+
+      spin?.stop(`Finished running in ${result.results.length} repo(s)`);
 
       for (const item of result.results) {
         stdout.write(`${colors.cyan(`== ${item.repo} ==`)}\n`);

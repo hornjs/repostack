@@ -12,6 +12,8 @@ export type RunOptions = {
   continueOnError: boolean;
   debug?: boolean;
   onDebug?: (message: string) => void;
+  onRepoStart?: (repo: string) => void;
+  onRepoDone?: (repo: string, exitCode: number) => void;
 };
 
 export async function run(root: string, config: RepostackConfig, options: RunOptions) {
@@ -49,11 +51,13 @@ export async function run(root: string, config: RepostackConfig, options: RunOpt
       options.onDebug?.(
         `run ${repo.name}: cwd=${join(root, repo.path)} command=${options.command}`,
       );
+      options.onRepoStart?.(repo.name);
       const execution = await execShellCommand(
         join(root, repo.path),
         options.command,
         shell,
       );
+      options.onRepoDone?.(repo.name, execution.exitCode);
 
       results[currentIndex] = {
         repo: repo.name,
