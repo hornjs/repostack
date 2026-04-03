@@ -1,6 +1,6 @@
 {
   "name": "repostack",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Multirepo workflow, monorepo feel.",
   "license": "MIT",
   "type": "module",
