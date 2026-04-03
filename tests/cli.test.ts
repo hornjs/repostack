@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { main } from "../src/cli";
 import { createInitialConfig, writeConfig } from "../src/config";
 import { createRepoFixture, createTempDir } from "./helpers";
+import pkg from "../package.json";
 
 
 function createWriter(options?: { isTTY?: boolean }) {
@@ -95,7 +96,7 @@ describe("cli", () => {
     });
 
     expect(code).toBe(0);
-    expect(stdout.chunks.join("")).toContain("0.0.0");
+    expect(stdout.chunks.join("")).toContain(pkg.version);
     expect(stderr.chunks.join("")).toBe("");
   });
 

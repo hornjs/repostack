@@ -24,7 +24,7 @@ export type UserConfig = {
 export type RepostackConfig = {
   version: 1;
   settings: {
-    shell: ShellConfig;
+    shell?: ShellConfig;
     concurrency: number;
     continueOnError: boolean;
   };

@@ -152,7 +152,6 @@ export function createInitialConfig(): RepostackConfig {
   return {
     version: 1,
     settings: {
-      shell: getDefaultShell(),
       concurrency: 4,
       continueOnError: false,
     },
