@@ -13,10 +13,6 @@
 - 为整个 stack 生成快照
 - 交互式 CLI 提示（基于 `@clack/prompts`）
 
-设计文档见：
-
-- `docs/specs/2026-04-02-repostack-design.md`
-
 ## Commands
 
 - `repostack init` - Initialize stack
