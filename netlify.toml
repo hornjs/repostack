@@ -1,9 +1,0 @@
-# netlify.toml
-[build]
-  base = "docs"
-  publish = ".output/public"
-  command = "pnpm run build"
-
-[build.environment]
-  NODE_OPTIONS = "--max-old-space-size=4096"
-  SERVER_PRESET = "netlify"
