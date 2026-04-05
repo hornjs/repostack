@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import YAML from "yaml";
 import type { RepostackConfig, RepostackLock } from "../types";
-import { getCurrentBranch, getHeadRevision } from "../git";
+import { getCurrentBranch, getHeadRevision, getRemoteUrl } from "../git";
 
 export { list as listRepos } from "./list";
 
@@ -26,9 +26,10 @@ export async function buildSnapshot(
   for (const repo of config.repos) {
     const cwd = join(root, repo.path);
     debug(`snapshot: reading ${repo.name} at ${cwd}`);
+    const source = await getRemoteUrl(cwd, repo.branch) ?? repo.source;
     lock.repos[repo.name] = {
       path: repo.path,
-      source: repo.source,
+      source,
       branch: await getCurrentBranch(cwd),
       revision: await getHeadRevision(cwd),
     };

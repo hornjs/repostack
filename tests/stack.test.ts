@@ -47,6 +47,25 @@ describe("stack state", () => {
     expect(lock.repos.evt.revision).toMatch(/[0-9a-f]{7,40}/);
   });
 
+  it("prefers the repo remote URL as the lock source when available", async () => {
+    const root = await createTempDir("repostack-lock-remote-");
+    const repo = await createRepoFixture(root, "evt", "@hornjs/evt");
+    await execFileAsync("git", ["remote", "add", "origin", "git@github.com:hornjs/evt.git"], {
+      cwd: repo,
+    });
+    const config = createInitialConfig();
+    config.repos.push({
+      name: "evt",
+      path: "evt",
+      source: "evt",
+      branch: "main",
+    });
+
+    const lock = await buildSnapshot(root, config);
+
+    expect(lock.repos.evt.source).toBe("git@github.com:hornjs/evt.git");
+  });
+
   it("clones a missing repo from its configured source", async () => {
     const root = await createTempDir("repostack-download-");
     const sourceRoot = await createTempDir("repostack-remote-");

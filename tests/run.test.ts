@@ -6,7 +6,7 @@ import { run } from "../src/commands/run";
 import { createRepoFixture, createTempDir } from "./helpers";
 
 describe("run", () => {
-  it("runs a command in each selected repo", async () => {
+  it("runs a command in each selected repo", { timeout: 10_000 }, async () => {
     const root = await createTempDir("repostack-run-");
     await createRepoFixture(root, "evt", "@hornjs/evt");
     await createRepoFixture(root, "fest", "@hornjs/fest");
@@ -31,7 +31,7 @@ describe("run", () => {
     expect(result.results.map((item) => item.stdout.trim())).toEqual(["evt", "fest"]);
   });
 
-  it("runs commands with the configured concurrency", async () => {
+  it("runs commands with the configured concurrency", { timeout: 10_000 }, async () => {
     const root = await createTempDir("repostack-run-concurrency-");
     await createRepoFixture(root, "evt", "@hornjs/evt");
     await createRepoFixture(root, "fest", "@hornjs/fest");

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { execFile } from "node:child_process";
 import { access, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { createTempDir, createRepoFixture, writeJson } from "./helpers";
 import {
   createInitialConfig,
@@ -13,6 +15,8 @@ import {
 import { init } from "../src/commands/init";
 import { use } from "../src/commands/use";
 import { remove } from "../src/commands/remove";
+
+const execFileAsync = promisify(execFile);
 
 describe("config", () => {
   it("creates a default config file", async () => {
@@ -91,6 +95,20 @@ describe("config", () => {
       name: "evt",
       path: "evt",
     });
+  });
+
+  it("uses the git remote URL as the source when registering a local repo", async () => {
+    const root = await createTempDir("repostack-use-remote-source-");
+    const repo = await createRepoFixture(root, "evt", "@hornjs/evt");
+    await execFileAsync("git", ["remote", "add", "origin", "git@github.com:hornjs/evt.git"], {
+      cwd: repo,
+    });
+    await writeConfig(join(root, "repostack.yaml"), createInitialConfig());
+
+    await use(root, "evt", { yes: true });
+    const loaded = await loadConfig(root);
+
+    expect(loaded.repos[0].source).toBe("git@github.com:hornjs/evt.git");
   });
 
   it("auto-initializes git repo with --yes flag", async () => {

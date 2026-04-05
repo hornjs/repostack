@@ -71,6 +71,62 @@ export async function getCurrentBranch(cwd: string): Promise<string> {
   }
 }
 
+async function getGitConfig(cwd: string, key: string): Promise<string | null> {
+  try {
+    return await git(cwd, ["config", "--get", key]);
+  } catch {
+    return null;
+  }
+}
+
+export async function getRemoteUrl(
+  cwd: string,
+  preferredBranch?: string,
+): Promise<string | null> {
+  const remoteNames: string[] = [];
+
+  if (preferredBranch && preferredBranch !== "(no commits)") {
+    const branchRemote = await getGitConfig(cwd, `branch.${preferredBranch}.remote`);
+    if (branchRemote) {
+      remoteNames.push(branchRemote);
+    }
+  }
+
+  const currentBranch = await getCurrentBranch(cwd);
+  if (currentBranch !== "(no commits)") {
+    const currentRemote = await getGitConfig(cwd, `branch.${currentBranch}.remote`);
+    if (currentRemote) {
+      remoteNames.push(currentRemote);
+    }
+  }
+
+  remoteNames.push("origin");
+
+  for (const remoteName of new Set(remoteNames)) {
+    try {
+      return await git(cwd, ["remote", "get-url", remoteName]);
+    } catch {
+      // Try the next candidate
+    }
+  }
+
+  try {
+    const remotes = await git(cwd, ["remote"]);
+    const fallbackRemote = remotes
+      .split("\n")
+      .map((remote) => remote.trim())
+      .find(Boolean);
+
+    if (fallbackRemote) {
+      return await git(cwd, ["remote", "get-url", fallbackRemote]);
+    }
+  } catch {
+    // No remotes configured
+  }
+
+  return null;
+}
+
 export async function isDirty(cwd: string): Promise<boolean> {
   const status = await git(cwd, ["status", "--short"]);
   return status.length > 0;

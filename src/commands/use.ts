@@ -1,7 +1,7 @@
 import { confirm, isCancel } from "@clack/prompts";
 import { join } from "node:path";
 import { loadConfig, loadConfigWithUser, useRepo, writeConfig } from "../config";
-import { isGitRepo, initGitRepo, pathExists } from "../git";
+import { getRemoteUrl, isGitRepo, initGitRepo, pathExists } from "../git";
 import { ensureGitignore } from "./init";
 import { snapshot } from "./snapshot";
 
@@ -68,7 +68,14 @@ export async function use(
     }
   }
 
-  const next = await useRepo(config, { cwd: root, path: repoPath });
+  const remoteSource = await getRemoteUrl(fullPath);
+  debug(`use: remoteSource=${remoteSource ?? "(none)"}`);
+
+  const next = await useRepo(config, {
+    cwd: root,
+    path: repoPath,
+    source: remoteSource ?? undefined,
+  });
   debug(`use: adding repo name=${next.repos[next.repos.length - 1]?.name}`);
   await writeConfig(join(root, "repostack.yaml"), next);
   debug("use: config written");

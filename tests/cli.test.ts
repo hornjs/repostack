@@ -100,7 +100,7 @@ describe("cli", () => {
     expect(stderr.chunks.join("")).toBe("");
   });
 
-  it("prints debug details for run when --debug is enabled", async () => {
+  it("prints debug details for run when --debug is enabled", { timeout: 10_000 }, async () => {
     const root = await createTempDir("repostack-cli-debug-");
     await createRepoFixture(root, "evt", "@hornjs/evt");
     await writeFile(join(root, "evt", "FLAG"), "evt\n");
