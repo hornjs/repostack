@@ -24,7 +24,7 @@ export type UserConfig = {
 export type ScriptEntry = {
   command: string;
   repos?: string[];
-  view?: string;
+  views?: string[];
   tags?: string[];
 };
 

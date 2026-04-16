@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { format } from "node:util";
 import { isCancel, select, spinner } from "@clack/prompts";
 import { cac, type CAC } from "cac";
@@ -14,7 +15,8 @@ import { use } from "./commands/use";
 import { remove } from "./commands/remove";
 import { doctor } from "./commands/doctor";
 import { listUsers, setUser, unsetUser } from "./commands/users";
-import { loadConfigWithUser, loadConfig, repostackrcExists } from "./config";
+import { loadConfigWithUser, loadConfig, repostackrcExists, resolveShell } from "./config";
+import { execShellCommand } from "./run";
 
 const unicodeOr = (c: string, fallback: string) => (isUnicodeSupported() ? c : fallback);
 const S_ERROR = unicodeOr("■", "x");
@@ -27,11 +29,6 @@ export type MainOptions = {
   stderr: Pick<NodeJS.WriteStream, "write"> & Partial<Pick<NodeJS.WriteStream, "isTTY">>;
 };
 
-function splitCommaList(value?: string): string[] | undefined {
-  if (!value) return undefined;
-  const items = value.split(",").map((item) => item.trim()).filter(Boolean);
-  return [...new Set(items)];
-}
 
 function createColors(
   stdout: MainOptions["stdout"],
@@ -400,17 +397,14 @@ function createCLI(options: {
 
   // Run command
   cli
-    .command("run [script]", "Run a named command across selected repos")
-    .option("--repos <repos>", "Comma-separated repo names to target (overrides command default)")
-    .option("--view <view>", "Named view to resolve repos from (overrides command default)")
-    .option("--tags <tags>", "Comma-separated repo tags that all must match (overrides command default)")
+    .command("run [script]", "Run a user-defined script")
+    .option("--dir <path>", "Working directory for scripts with no scope (default: stack root)")
     .example("repostack run build")
-    .example("repostack run test --view runtime")
-    .example("repostack run lint --repos evt,fest")
+    .example("repostack run deploy --dir ./packages/foo")
     .action(async (script: string | undefined, ...args: unknown[]) => {
-      const opts = args[args.length - 1] as { repos?: string; view?: string; tags?: string };
-
-      debug(`command=run script=${script ?? "(none)"} options=${JSON.stringify(opts)}`);
+      const opts = args[args.length - 1] as { dir?: string; "--"?: string[] };
+      const extraArgs = opts["--"]?.join(" ");
+      debug(`command=run script=${script ?? "(none)"} dir=${opts.dir ?? "(root)"} extra=${extraArgs ?? "(none)"}`);
 
       const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
 
@@ -431,48 +425,67 @@ function createCLI(options: {
       const entry = config.scripts[script];
       if (!entry) {
         const available = Object.keys(config.scripts).join(", ") || "(none)";
-        stderr.write(`${colors.red(`Unknown command: "${script}". Available: ${available}`)}\n`);
+        stderr.write(`${colors.red(`Unknown script: "${script}". Available: ${available}`)}\n`);
         onExitCode(1);
         return;
       }
 
-      // CLI args take priority over command-level defaults
-      const selectedRepos = splitCommaList(opts.repos) ?? (entry.repos?.length ? entry.repos : undefined);
-      const selectedView = opts.view ?? entry.view;
-      const selectedTags = splitCommaList(opts.tags) ?? (entry.tags?.length ? entry.tags : undefined);
+      const shell = resolveShell(config.settings.shell);
+      const hasScope = entry.repos?.length || entry.views?.length || entry.tags?.length;
+      const command = extraArgs ? `${entry.command} ${extraArgs}` : entry.command;
 
-      const spin = stdout.isTTY ? spinner() : null;
-      spin?.start("Preparing...");
+      if (opts.dir && hasScope) {
+        stderr.write(`${colors.red("--dir cannot be used with scripts that have repos/views/tags scope.")}\n`);
+        onExitCode(1);
+        return;
+      }
 
-      const result = await run(process.cwd(), config, {
-        command: entry.command,
-        repos: selectedRepos,
-        view: selectedView,
-        tags: selectedTags,
-        concurrency: config.settings.concurrency,
-        continueOnError: config.settings.continueOnError,
-        debug: Boolean(cli.options.debug),
-        onDebug: debug,
-        onRepoStart: (repoName) => {
-          spin?.message(`Running in ${repoName}...`);
-        },
-        onRepoDone: (repoName, exitCode) => {
-          const status = exitCode === 0 ? colors.green("done") : colors.red("failed");
-          spin?.message(`${repoName}: ${status}`);
-        },
-      });
+      if (hasScope) {
+        // Per-repo execution
+        const spin = stdout.isTTY ? spinner() : null;
+        spin?.start("Preparing...");
 
-      spin?.stop(`Finished running in ${result.results.length} repo(s)`);
+        const result = await run(process.cwd(), config, {
+          command,
+          repos: entry.repos,
+          views: entry.views,
+          tags: entry.tags,
+          concurrency: config.settings.concurrency,
+          continueOnError: config.settings.continueOnError,
+          onDebug: debug,
+          onRepoStart: (repoName) => {
+            spin?.message(`Running in ${repoName}...`);
+          },
+          onRepoDone: (repoName, exitCode) => {
+            const status = exitCode === 0 ? colors.green("done") : colors.red("failed");
+            spin?.message(`${repoName}: ${status}`);
+          },
+        });
 
-      for (const item of result.results) {
-        stdout.write(`${colors.cyan(`== ${item.repo} ==`)}\n`);
-        stdout.write(item.stdout);
-        if (item.stderr) {
-          stderr.write(item.stderr);
+        spin?.stop(`Finished running in ${result.results.length} repo(s)`);
+
+        for (const item of result.results) {
+          stdout.write(`${colors.cyan(`== ${item.repo} ==`)}\n`);
+          stdout.write(item.stdout);
+          if (item.stderr) {
+            stderr.write(item.stderr);
+          }
+          if (item.exitCode !== 0) {
+            onExitCode(item.exitCode);
+            return;
+          }
         }
-        if (item.exitCode !== 0) {
-          onExitCode(item.exitCode);
-          return;
+      } else {
+        // Single execution in stack root (or --dir)
+        const cwd = opts.dir ? resolve(process.cwd(), opts.dir) : process.cwd();
+        debug(`run: executing in ${cwd}: ${command}`);
+        const execution = await execShellCommand(cwd, command, shell);
+        stdout.write(execution.stdout);
+        if (execution.stderr) {
+          stderr.write(execution.stderr);
+        }
+        if (execution.exitCode !== 0) {
+          onExitCode(execution.exitCode);
         }
       }
     });

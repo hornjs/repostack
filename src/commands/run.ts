@@ -6,11 +6,10 @@ import type { RepostackConfig } from "../types";
 export type RunOptions = {
   command: string;
   repos?: string[];
-  view?: string;
+  views?: string[];
   tags?: string[];
   concurrency: number;
   continueOnError: boolean;
-  debug?: boolean;
   onDebug?: (message: string) => void;
   onRepoStart?: (repo: string) => void;
   onRepoDone?: (repo: string, exitCode: number) => void;
@@ -19,7 +18,7 @@ export type RunOptions = {
 export async function run(root: string, config: RepostackConfig, options: RunOptions) {
   const repos = resolveRepoSelection(config, {
     repos: options.repos,
-    view: options.view,
+    views: options.views,
     tags: options.tags,
   });
 

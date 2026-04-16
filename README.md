@@ -23,7 +23,7 @@ Commands:
   pull                    Clone repos that are declared but missing locally
   sync                    Fetch and checkout revisions from the current lock file
   list                    Show the current branch, revision, and dirty state for each repo
-  run                     Run a shell command across selected repos
+  run [script]            Run a named script across selected repos
   snapshot                Write repostack.lock.yaml from current repo revisions
 
 For more info, run any command with the `--help` flag:
@@ -69,4 +69,11 @@ repos:
 views:
   runtime:
     tags: [runtime]
+
+scripts:
+  test:
+    command: pnpm test
+  build:
+    command: pnpm build
+    view: runtime
 ```

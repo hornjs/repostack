@@ -69,8 +69,8 @@ describe("cli", () => {
     });
 
     expect(code).toBe(0);
-    expect(stdout.chunks.join("")).toContain("--repos");
-    expect(stdout.chunks.join("")).toContain("Options:");
+    expect(stdout.chunks.join("")).toContain("repostack run [script]");
+    expect(stdout.chunks.join("")).toContain("Examples:");
     expect(stderr.chunks.join("")).toBe("");
   });
 
@@ -116,7 +116,7 @@ describe("cli", () => {
       branch: "main",
       tags: ["runtime"],
     });
-    config.scripts["greet"] = { command: "echo ok" };
+    config.scripts["greet"] = { command: "echo ok", repos: ["evt"] };
     await writeConfig(join(root, "repostack.yaml"), config);
 
     const previousCwd = process.cwd();
@@ -127,7 +127,7 @@ describe("cli", () => {
       const stderr = createWriter();
 
       const code = await main({
-        args: ["--debug", "run", "greet", "--repos", "evt"],
+        args: ["--debug", "run", "greet"],
         stdout: stdout.stream as any,
         stderr: stderr.stream as any,
       });

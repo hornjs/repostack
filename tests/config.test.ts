@@ -67,7 +67,7 @@ describe("config", () => {
       scripts: {},
     };
 
-    const selected = resolveRepoSelection(config, { view: "runtime" });
+    const selected = resolveRepoSelection(config, { views: ["runtime"] });
 
     expect(selected.map((repo) => repo.name)).toEqual(["evt", "fest"]);
   });

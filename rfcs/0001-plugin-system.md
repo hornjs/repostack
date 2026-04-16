@@ -17,7 +17,7 @@
 
 目前 `repostack` 存在多个"已预留但未实现"的扩展点：
 
-- `repostack.yaml` 中的 `commands` 字段虽然已在文档中说明，但缺乏执行引擎。
+- `repostack.yaml` 中的 `scripts` 字段已支持命名脚本与默认 repo 范围，但缺乏进一步的生命周期介入能力（如执行前校验、执行后通知）。
 - `run` 命令内部存在 `onRepoStart` / `onRepoDone` 回调，但它们仅用于 CLI 的 spinner 输出，未向终端用户暴露。
 - 团队无法在不修改 `src/cli.ts` 的情况下添加与自身技术栈强相关的自定义工作流（例如 `deploy`、`test-matrix`、`changeset-check`）。
 
@@ -208,31 +208,31 @@ export function definePlugin<T = unknown>(
 
 ---
 
-## 7. 通过插件实现命令别名
+## 7. `scripts` 与插件的关系
 
-`repostack.yaml` 中现有的 `commands` 字段：
+`repostack.yaml` 中的 `scripts` 字段是内置的、有明确语义的一等功能，**不会被弃用**：
 
 ```yaml
-commands:
-  build: { command: "pnpm build" }
+scripts:
+  build:
+    command: pnpm build
+    view: runtime          # 可选：默认 repo 范围
+  test:
+    command: vitest
+    tags: [testable]
 ```
 
-建议在未来**弃用**，改由第一方插件或内置的别名解析机制替代。插件可以更干净地实现相同能力：
+通过 `repostack run <script>` 调用，CLI 的 `--repos`/`--view`/`--tags` 参数可覆盖脚本中的默认范围。
 
-```ts
-export default definePlugin((options) => ({
-  name: "alias",
-  onRegisterCommands({ cli, config }) {
-    for (const [alias, { command }] of Object.entries(config.commands || {})) {
-      cli.command(alias, `Alias for: ${command}`).action(async () => {
-        // 委托给 run 内部逻辑
-      });
-    }
-  },
-}));
-```
+**与插件的分工：**
 
-**待决策：** `commands` 的内置支持是否应完全移除，仅作为核心语法糖保留？
+| 场景 | 推荐方式 |
+|------|----------|
+| 跨 repo 执行固定 shell 命令 | `scripts` |
+| 需要自定义逻辑、条件分支、副作用 | 插件的 `onRegisterCommands` |
+| 拦截 `run` 执行过程 | 插件的 `onRunBefore` / `onRunAfter` |
+
+插件可以读取 `config.scripts` 并在 `onRegisterCommands` 中为每个脚本注册额外行为，但核心的 `repostack run` 路径由内置实现负责。
 
 ---
 
@@ -258,7 +258,7 @@ export default definePlugin((options) => ({
 ## 10. 向后兼容性
 
 - `plugins` 在 `repostack.yaml` 中为可选字段。
-- 现有的 `commands` 字段继续被解析，但在做出单独决策之前其执行行为保持不变。
+- 现有的 `scripts` 字段保持完整语义，`repostack run <script>` 行为不受插件系统引入影响。
 - `repostack.lock.yaml` 不做任何修改。
 
 ---

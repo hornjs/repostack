@@ -173,16 +173,22 @@ export async function writeConfig(path: string, config: RepostackConfig): Promis
 
 export function resolveRepoSelection(
   config: RepostackConfig,
-  selection: { repos?: string[]; view?: string; tags?: string[] },
+  selection: { repos?: string[]; views?: string[]; tags?: string[] },
 ): RepoEntry[] {
   let repos = [...config.repos];
 
-  if (selection.view) {
-    const view = config.views[selection.view];
-    if (!view) {
-      throw new Error(`Unknown view: ${selection.view}`);
+  if (selection.views?.length) {
+    const seen = new Map<string, RepoEntry>();
+    for (const viewName of selection.views) {
+      const view = config.views[viewName];
+      if (!view) {
+        throw new Error(`Unknown view: ${viewName}`);
+      }
+      for (const repo of resolveRepoSelection(config, { repos: view.repos, tags: view.tags })) {
+        seen.set(repo.name, repo);
+      }
     }
-    repos = resolveRepoSelection(config, { repos: view.repos, tags: view.tags });
+    repos = [...seen.values()];
   }
 
   if (selection.repos?.length) {
