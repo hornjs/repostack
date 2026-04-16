@@ -64,7 +64,7 @@ describe("config", () => {
           tags: ["runtime"],
         },
       },
-      commands: {},
+      scripts: {},
     };
 
     const selected = resolveRepoSelection(config, { view: "runtime" });

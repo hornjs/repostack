@@ -21,6 +21,13 @@ export type UserConfig = {
   repos: Record<string, Partial<RepoEntry>>;
 };
 
+export type ScriptEntry = {
+  command: string;
+  repos?: string[];
+  view?: string;
+  tags?: string[];
+};
+
 export type RepostackConfig = {
   version: 1;
   settings: {
@@ -30,7 +37,7 @@ export type RepostackConfig = {
   };
   repos: RepoEntry[];
   views: Record<string, ViewEntry>;
-  commands: Record<string, { command: string }>;
+  scripts: Record<string, ScriptEntry>;
   users?: Record<string, UserConfig>;
 };
 

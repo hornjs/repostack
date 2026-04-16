@@ -1,5 +1,5 @@
 import { format } from "node:util";
-import { isCancel, multiselect, select, spinner } from "@clack/prompts";
+import { isCancel, select, spinner } from "@clack/prompts";
 import { cac, type CAC } from "cac";
 import isUnicodeSupported from "is-unicode-supported";
 import pico from "picocolors";
@@ -400,65 +400,55 @@ function createCLI(options: {
 
   // Run command
   cli
-    .command("run", "Run a shell command across selected repos")
-    .option("--repos <repos>", "Comma-separated repo names to target")
-    .option("--view <view>", "Named view to resolve repos from")
-    .option("--tags <tags>", "Comma-separated repo tags that all must match")
-    .example("repostack run --view runtime -- pnpm test")
-    .example("repostack run --repos evt,fest -- pnpm build")
-    .action(async (...args: unknown[]) => {
-      const opts = args[args.length - 1] as { repos?: string; view?: string; tags?: string; "--"?: string[] };
-      const command = opts["--"] ?? [];
+    .command("run [script]", "Run a named command across selected repos")
+    .option("--repos <repos>", "Comma-separated repo names to target (overrides command default)")
+    .option("--view <view>", "Named view to resolve repos from (overrides command default)")
+    .option("--tags <tags>", "Comma-separated repo tags that all must match (overrides command default)")
+    .example("repostack run build")
+    .example("repostack run test --view runtime")
+    .example("repostack run lint --repos evt,fest")
+    .action(async (script: string | undefined, ...args: unknown[]) => {
+      const opts = args[args.length - 1] as { repos?: string; view?: string; tags?: string };
 
-      debug(`command=run args=${JSON.stringify(command)} options=${JSON.stringify(opts)}`);
-      if (command.length === 0) {
-        stderr.write(`${colors.red("Missing shell command for `repostack run`. Usage: repostack run [options] -- <command>")}\n`);
+      debug(`command=run script=${script ?? "(none)"} options=${JSON.stringify(opts)}`);
+
+      const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
+
+      if (!script) {
+        const scripts = Object.keys(config.scripts);
+        if (scripts.length === 0) {
+          stderr.write(`${colors.red("No scripts defined. Add scripts to repostack.yaml.")}\n`);
+        } else {
+          stderr.write(`${colors.yellow("Missing script name. Available scripts:")}\n`);
+          for (const name of scripts) {
+            stderr.write(`  ${colors.cyan(name)}  ${config.scripts[name].command}\n`);
+          }
+        }
         onExitCode(1);
         return;
       }
 
-      const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-
-      let selectedRepos = splitCommaList(opts.repos);
-      const selectedView = opts.view;
-
-      // Interactive repo selection in TTY when no repos or view provided
-      if (!selectedRepos && !selectedView) {
-        if (stdout.isTTY && config.repos.length > 0) {
-          const picked = await multiselect({
-            message: "Select repos to run the command in",
-            options: config.repos.map((r) => ({
-              value: r.name,
-              label: r.name,
-              hint: r.tags?.join(", ") || undefined,
-            })),
-            required: true,
-          });
-          if (isCancel(picked) || !Array.isArray(picked) || picked.length === 0) {
-            stderr.write(`${colors.red("No repos selected. Aborted.")}\n`);
-            onExitCode(1);
-            return;
-          }
-          selectedRepos = picked as string[];
-        } else if (config.repos.length === 0) {
-          stderr.write(`${colors.red("No repos defined in this stack.")}\n`);
-          onExitCode(1);
-          return;
-        } else {
-          stderr.write(`${colors.red("Missing --repos or --view for non-interactive environment.")}\n`);
-          onExitCode(1);
-          return;
-        }
+      const entry = config.scripts[script];
+      if (!entry) {
+        const available = Object.keys(config.scripts).join(", ") || "(none)";
+        stderr.write(`${colors.red(`Unknown command: "${script}". Available: ${available}`)}\n`);
+        onExitCode(1);
+        return;
       }
+
+      // CLI args take priority over command-level defaults
+      const selectedRepos = splitCommaList(opts.repos) ?? (entry.repos?.length ? entry.repos : undefined);
+      const selectedView = opts.view ?? entry.view;
+      const selectedTags = splitCommaList(opts.tags) ?? (entry.tags?.length ? entry.tags : undefined);
 
       const spin = stdout.isTTY ? spinner() : null;
       spin?.start("Preparing...");
 
       const result = await run(process.cwd(), config, {
-        command: command.join(" "),
+        command: entry.command,
         repos: selectedRepos,
         view: selectedView,
-        tags: splitCommaList(opts.tags),
+        tags: selectedTags,
         concurrency: config.settings.concurrency,
         continueOnError: config.settings.continueOnError,
         debug: Boolean(cli.options.debug),

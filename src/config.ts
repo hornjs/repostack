@@ -157,7 +157,7 @@ export function createInitialConfig(): RepostackConfig {
     },
     repos: [],
     views: {},
-    commands: {},
+    scripts: {},
   };
 }
 

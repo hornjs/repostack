@@ -116,6 +116,7 @@ describe("cli", () => {
       branch: "main",
       tags: ["runtime"],
     });
+    config.scripts["greet"] = { command: "echo ok" };
     await writeConfig(join(root, "repostack.yaml"), config);
 
     const previousCwd = process.cwd();
@@ -126,7 +127,7 @@ describe("cli", () => {
       const stderr = createWriter();
 
       const code = await main({
-        args: ["--debug", "run", "--repos", "evt", "--", "echo", "ok"],
+        args: ["--debug", "run", "greet", "--repos", "evt"],
         stdout: stdout.stream as any,
         stderr: stderr.stream as any,
       });
