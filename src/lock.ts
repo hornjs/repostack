@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import YAML from "yaml";
 import { pathExists } from "./git";
-import type { RepostackLock } from "./types";
+import type { RepostackLock } from "./shared/types";
 
 function calculateChecksum(lock: Omit<RepostackLock, "checksum">): string {
   const content = JSON.stringify(lock, Object.keys(lock).sort());

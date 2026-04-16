@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { resolveRepoSelection, resolveShell } from "../config";
-import { execShellCommand } from "../run";
-import type { RepostackConfig } from "../types";
+import { execShellCommand } from "../shared/run";
+import type { RepostackConfig } from "../shared/types";
 
 export type RunOptions = {
   command: string;

@@ -3,7 +3,7 @@ import type { CAC } from "cac";
 import { spinner } from "@clack/prompts";
 import { run } from "../commands/run";
 import { loadConfigWithUser, resolveShell } from "../config";
-import { execShellCommand } from "../run";
+import { execShellCommand } from "../shared/run";
 import type { CliContext } from "./context";
 
 export function registerRun(cli: CAC, ctx: CliContext): void {

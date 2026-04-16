@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { RepoEntry, RepostackConfig } from "../types";
+import type { RepoEntry, RepostackConfig } from "../shared/types";
 import { getCurrentBranch, getHeadRevision, isDirty } from "../git";
 
 export type RepoListRow = {

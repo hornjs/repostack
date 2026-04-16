@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import YAML from "yaml";
 import { loadConfig, usesImplicitSource, writeConfig } from "../config";
-import type { RepostackConfig, RepostackLock } from "../types";
+import type { RepostackConfig, RepostackLock } from "../shared/types";
 import { getCurrentBranch, getHeadRevision, getRemoteUrl, pathExists } from "../git";
 
 export { list as listRepos } from "./list";

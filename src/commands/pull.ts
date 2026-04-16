@@ -1,7 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { usesImplicitSource } from "../config";
-import type { RepostackConfig } from "../types";
+import type { RepostackConfig } from "../shared/types";
 import { cloneRepo, pathExists } from "../git";
 import { loadLock } from "../lock";
 

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { confirm, isCancel } from "@clack/prompts";
-import type { RepostackConfig, RepostackLock } from "../types";
+import type { RepostackConfig, RepostackLock } from "../shared/types";
 import { checkoutRevision, fetchRepo, isDirty } from "../git";
 import { loadLock } from "../lock";
 import { pull } from "./pull";
