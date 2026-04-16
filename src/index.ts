@@ -1,4 +1,4 @@
-import { main } from "./cli";
+import { main } from "./cli/index";
 
 const code = await main({
   args: process.argv.slice(2),
