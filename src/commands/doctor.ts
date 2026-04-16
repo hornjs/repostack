@@ -17,17 +17,23 @@ export type DoctorResult = {
 
 export async function doctor(
   root: string,
-  options: { onDebug?: (message: string) => void } = {},
+  options: { onDebug?: (message: string) => void; onIssue?: (issue: DoctorIssue) => void } = {},
 ): Promise<DoctorResult> {
   const debug = options.onDebug ?? (() => {});
+  const onIssue = options.onIssue ?? (() => {});
   const issues: DoctorIssue[] = [];
+
+  function report(issue: DoctorIssue) {
+    report(issue);
+    onIssue(issue);
+  }
 
   // 1. Check repostack.yaml exists
   debug("doctor: checking repostack.yaml");
   try {
     await access(join(root, "repostack.yaml"));
   } catch {
-    issues.push({ type: "error", message: "repostack.yaml not found. Run: repostack init" });
+    report({ type: "error", message: "repostack.yaml not found. Run: repostack init" });
     return { issues, hasErrors: true, hasWarnings: false };
   }
 
@@ -36,7 +42,7 @@ export async function doctor(
   try {
     config = await loadConfig(root);
   } catch (error) {
-    issues.push({
+    report({
       type: "error",
       message: `Failed to load repostack.yaml: ${error instanceof Error ? error.message : String(error)}`,
     });
@@ -53,24 +59,24 @@ export async function doctor(
     // Users defined: check .repostackrc exists and has valid user
     if (!hasRepostackrc) {
       const available = Object.keys(config.users!).join(", ");
-      issues.push({
+      report({
         type: "error",
         message: `Users defined but .repostackrc not found. Available users: ${available}. Run: repostack user switch <name>`,
       });
     } else if (!userName) {
-      issues.push({
+      report({
         type: "error",
         message: `.repostackrc exists but no user selected. Run: repostack user switch <name>`,
       });
     } else if (!config.users![userName]) {
-      issues.push({ type: "error", message: `Selected user '${userName}' not found in config` });
+      report({ type: "error", message: `Selected user '${userName}' not found in config` });
     } else {
-      issues.push({ type: "info", message: `Using user: ${userName}` });
+      report({ type: "info", message: `Using user: ${userName}` });
     }
   } else {
     // No users defined: .repostackrc should not exist (unused)
     if (hasRepostackrc) {
-      issues.push({
+      report({
         type: "warning",
         message: `.repostackrc exists but no users defined in config. Run: repostack user unset to remove it`,
       });
@@ -83,37 +89,37 @@ export async function doctor(
     try {
       const gitignore = await readFile(join(root, ".gitignore"), "utf8");
       if (!gitignore.includes(".repostackrc")) {
-        issues.push({
+        report({
           type: "warning",
           message: ".gitignore should contain '.repostackrc' to prevent committing user config",
         });
       }
     } catch {
-      issues.push({ type: "warning", message: ".gitignore not found. Recommended to create one with .repostackrc" });
+      report({ type: "warning", message: ".gitignore not found. Recommended to create one with .repostackrc" });
     }
   }
 
   // 5. Check repos
   debug("doctor: checking repos");
   if (config.repos.length === 0) {
-    issues.push({ type: "warning", message: "No repos defined. Use: repostack use <path>" });
+    report({ type: "warning", message: "No repos defined. Use: repostack use <path>" });
   } else {
     for (const repo of config.repos) {
       const repoPath = join(root, repo.path);
       
       // Check path exists
       if (!(await pathExists(repoPath))) {
-        issues.push({ type: "error", message: `Repo '${repo.name}': path not found at ${repo.path}` });
+        report({ type: "error", message: `Repo '${repo.name}': path not found at ${repo.path}` });
         continue;
       }
 
       // Check is git repo
       if (!(await isGitRepo(repoPath))) {
-        issues.push({ type: "error", message: `Repo '${repo.name}': not a git repository` });
+        report({ type: "error", message: `Repo '${repo.name}': not a git repository` });
         continue;
       }
 
-      issues.push({ type: "info", message: `Repo '${repo.name}': OK` });
+      report({ type: "info", message: `Repo '${repo.name}': OK` });
     }
   }
 
@@ -121,17 +127,17 @@ export async function doctor(
   debug("doctor: checking lock file");
   try {
     await access(join(root, "repostack.lock.yaml"));
-    issues.push({ type: "info", message: "Lock file exists" });
+    report({ type: "info", message: "Lock file exists" });
   } catch {
-    issues.push({ type: "warning", message: "Lock file not found. Run: repostack snapshot" });
+    report({ type: "warning", message: "Lock file not found. Run: repostack snapshot" });
   }
 
   // 7. Check stack root is git repo
   debug("doctor: checking stack root git");
   if (!(await isGitRepo(root))) {
-    issues.push({ type: "warning", message: "Stack root is not a git repository. Recommended for time-travel workflow" });
+    report({ type: "warning", message: "Stack root is not a git repository. Recommended for time-travel workflow" });
   } else {
-    issues.push({ type: "info", message: "Stack root is a git repository" });
+    report({ type: "info", message: "Stack root is a git repository" });
   }
 
   // 8. Check if repo parent directories are in .gitignore
@@ -161,7 +167,7 @@ export async function doctor(
     ];
     const isIgnored = patterns.some((p) => gitignoreContent.includes(p));
     if (!isIgnored) {
-      issues.push({
+      report({
         type: "warning",
         message: `.gitignore should contain '${parentPath}/' to prevent committing sub-repos`,
       });
@@ -192,7 +198,7 @@ export async function doctor(
         // Check if it's a git repo
         if (await isGitRepo(fullPath)) {
           const relativePath = fullPath.slice(root.length + 1);
-          issues.push({
+          report({
             type: "warning",
             message: `Found untracked git repository: ${relativePath} (not in repostack.yaml)`,
           });

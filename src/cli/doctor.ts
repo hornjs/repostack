@@ -1,5 +1,6 @@
 import type { CAC } from "cac";
 import { doctor } from "../commands/doctor";
+import type { DoctorIssue } from "../commands/doctor";
 import { S_ERROR, S_WARN, S_INFO } from "./context";
 import type { CliContext } from "./context";
 
@@ -10,9 +11,8 @@ export function registerDoctor(cli: CAC, ctx: CliContext): void {
     .command("doctor", "Diagnose stack configuration and health")
     .action(async () => {
       debug("command=doctor");
-      const result = await doctor(process.cwd(), { onDebug: debug });
 
-      for (const issue of result.issues) {
+      function printIssue(issue: DoctorIssue) {
         switch (issue.type) {
           case "error":
             stderr.write(`${colors.red(S_ERROR)} ${issue.message}\n`);
@@ -25,6 +25,8 @@ export function registerDoctor(cli: CAC, ctx: CliContext): void {
             break;
         }
       }
+
+      const result = await doctor(process.cwd(), { onDebug: debug, onIssue: printIssue });
 
       if (result.hasErrors) {
         onExitCode(1);
