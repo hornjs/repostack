@@ -1,6 +1,6 @@
 import type { CAC } from "cac";
 import { pull } from "../commands/pull";
-import { loadConfigWithUser } from "../config";
+import { loadConfigWithUser } from "../shared/config";
 import type { CliContext } from "./context";
 
 export function registerPull(cli: CAC, ctx: CliContext): void {

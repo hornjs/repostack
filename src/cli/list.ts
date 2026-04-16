@@ -1,6 +1,6 @@
 import type { CAC } from "cac";
 import { list } from "../commands/list";
-import { loadConfigWithUser } from "../config";
+import { loadConfigWithUser } from "../shared/config";
 import type { CliContext } from "./context";
 
 export function registerList(cli: CAC, ctx: CliContext): void {

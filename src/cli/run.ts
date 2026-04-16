@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import type { CAC } from "cac";
 import { spinner } from "@clack/prompts";
 import { run } from "../commands/run";
-import { loadConfigWithUser, resolveShell } from "../config";
+import { loadConfigWithUser, resolveShell } from "../shared/config";
 import { execShellCommand } from "../shared/run";
 import type { CliContext } from "./context";
 

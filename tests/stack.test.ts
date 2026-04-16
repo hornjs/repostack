@@ -4,12 +4,12 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import YAML from "yaml";
-import { createInitialConfig, writeConfig } from "../src/config";
+import { createInitialConfig, writeConfig } from "../src/shared/config";
 import { buildSnapshot, listRepos } from "../src/commands/snapshot";
 import { pull } from "../src/commands/pull";
 import { sync } from "../src/commands/sync";
 import { snapshot } from "../src/commands/snapshot";
-import { loadConfig } from "../src/config";
+import { loadConfig } from "../src/shared/config";
 import { createRepoFixture, createTempDir } from "./helpers";
 
 const execFileAsync = promisify(execFile);

@@ -1,6 +1,6 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
-import { loadConfig, loadRepostackrc, repostackrcExists } from "../config";
+import { loadConfig, loadRepostackrc, repostackrcExists } from "../shared/config";
 import { isGitRepo, pathExists } from "../shared/git";
 import type { RepostackConfig } from "../shared/types";
 

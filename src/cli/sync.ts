@@ -1,6 +1,6 @@
 import type { CAC } from "cac";
 import { sync } from "../commands/sync";
-import { loadConfigWithUser } from "../config";
+import { loadConfigWithUser } from "../shared/config";
 import type { CliContext } from "./context";
 
 export function registerSync(cli: CAC, ctx: CliContext): void {

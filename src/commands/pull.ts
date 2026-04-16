@@ -1,6 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { usesImplicitSource } from "../config";
+import { usesImplicitSource } from "../shared/config";
 import type { RepostackConfig } from "../shared/types";
 import { cloneRepo, pathExists } from "../shared/git";
 import { loadLock } from "../shared/lock";

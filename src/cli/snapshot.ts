@@ -1,6 +1,6 @@
 import type { CAC } from "cac";
 import { snapshot } from "../commands/snapshot";
-import { loadConfigWithUser } from "../config";
+import { loadConfigWithUser } from "../shared/config";
 import type { CliContext } from "./context";
 
 export function registerSnapshot(cli: CAC, ctx: CliContext): void {

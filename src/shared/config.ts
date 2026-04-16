@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { basename, join, relative } from "node:path";
 import { platform } from "node:process";
 import YAML from "yaml";
-import type { RepoEntry, RepostackConfig, ShellConfig, UserConfig } from "./shared/types";
+import type { RepoEntry, RepostackConfig, ShellConfig, UserConfig } from "./types";
 
 const REPOSTACK_RC = ".repostackrc";
 

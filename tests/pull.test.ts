@@ -1,7 +1,7 @@
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createInitialConfig } from "../src/config";
+import { createInitialConfig } from "../src/shared/config";
 import { pull } from "../src/commands/pull";
 import { createTempDir } from "./helpers";
 

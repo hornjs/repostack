@@ -1,6 +1,6 @@
 import { confirm, isCancel } from "@clack/prompts";
 import { join } from "node:path";
-import { loadConfig, loadConfigWithUser, removeRepo, writeConfig } from "../config";
+import { loadConfig, loadConfigWithUser, removeRepo, writeConfig } from "../shared/config";
 import { snapshot } from "./snapshot";
 
 export async function remove(

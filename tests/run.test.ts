@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createInitialConfig } from "../src/config";
+import { createInitialConfig } from "../src/shared/config";
 import { run } from "../src/commands/run";
 import { createRepoFixture, createTempDir } from "./helpers";
 

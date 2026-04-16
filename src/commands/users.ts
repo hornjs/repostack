@@ -1,4 +1,4 @@
-import { loadConfig, loadRepostackrc, removeRepostackrc, saveRepostackrc } from "../config";
+import { loadConfig, loadRepostackrc, removeRepostackrc, saveRepostackrc } from "../shared/config";
 
 export async function listUsers(root: string): Promise<{ users: string[]; current: string | null }> {
   const config = await loadConfig(root);

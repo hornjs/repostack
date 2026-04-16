@@ -2,7 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import YAML from "yaml";
-import { loadConfig, usesImplicitSource, writeConfig } from "../config";
+import { loadConfig, usesImplicitSource, writeConfig } from "../shared/config";
 import type { RepostackConfig, RepostackLock } from "../shared/types";
 import { getCurrentBranch, getHeadRevision, getRemoteUrl, pathExists } from "../shared/git";
 

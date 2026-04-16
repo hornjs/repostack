@@ -11,7 +11,7 @@ import {
   resolveRepoSelection,
   useRepo,
   writeConfig,
-} from "../src/config";
+} from "../src/shared/config";
 import { init } from "../src/commands/init";
 import { use } from "../src/commands/use";
 import { remove } from "../src/commands/remove";

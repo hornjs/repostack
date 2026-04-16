@@ -4,7 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { main } from "../src/cli";
-import { createInitialConfig, writeConfig } from "../src/config";
+import { createInitialConfig, writeConfig } from "../src/shared/config";
 import { createRepoFixture, createTempDir } from "./helpers";
 import pkg from "../package.json";
 

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { resolveRepoSelection, resolveShell } from "../config";
+import { resolveRepoSelection, resolveShell } from "../shared/config";
 import { execShellCommand } from "../shared/run";
 import type { RepostackConfig } from "../shared/types";
 

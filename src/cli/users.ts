@@ -1,6 +1,6 @@
 import type { CAC } from "cac";
 import { isCancel, select } from "@clack/prompts";
-import { loadConfig, loadRepostackrc, repostackrcExists } from "../config";
+import { loadConfig, loadRepostackrc, repostackrcExists } from "../shared/config";
 import { listUsers, setUser, unsetUser } from "../commands/users";
 import type { CliContext } from "./context";
 
