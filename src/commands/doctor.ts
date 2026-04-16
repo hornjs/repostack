@@ -1,7 +1,7 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { loadConfig, loadRepostackrc, repostackrcExists } from "../config";
-import { isGitRepo, pathExists } from "../git";
+import { isGitRepo, pathExists } from "../shared/git";
 import type { RepostackConfig } from "../shared/types";
 
 export type DoctorIssue = {

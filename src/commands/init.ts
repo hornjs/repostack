@@ -1,7 +1,7 @@
 import { access, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createInitialConfig, repostackrcExists, writeConfig } from "../config";
-import { initGitRepo, isGitRepo } from "../git";
+import { initGitRepo, isGitRepo } from "../shared/git";
 
 const REPOSTACK_GITIGNORE = `# Repostack user configuration
 .repostackrc

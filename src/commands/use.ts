@@ -1,7 +1,7 @@
 import { confirm, isCancel } from "@clack/prompts";
 import { join } from "node:path";
 import { loadConfig, loadConfigWithUser, useRepo, writeConfig } from "../config";
-import { getRemoteUrl, isGitRepo, initGitRepo, pathExists } from "../git";
+import { getRemoteUrl, isGitRepo, initGitRepo, pathExists } from "../shared/git";
 import { ensureGitignore } from "./init";
 import { snapshot } from "./snapshot";
 
