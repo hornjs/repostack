@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { execFile } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { main } from "../src/cli";
 import { createInitialConfig, writeConfig } from "../src/config";
 import { createRepoFixture, createTempDir } from "./helpers";
 import pkg from "../package.json";
 
+const execFileAsync = promisify(execFile);
 
 function createWriter(options?: { isTTY?: boolean }) {
   const chunks: string[] = [];
@@ -133,6 +136,45 @@ describe("cli", () => {
       expect(stderr.chunks.join("")).toContain("[debug]");
       expect(stderr.chunks.join("")).toContain("selected repos: evt");
       expect(stderr.chunks.join("")).toContain("echo ok");
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("prints pull progress for missing repos", { timeout: 10_000 }, async () => {
+    const root = await createTempDir("repostack-cli-pull-");
+    const sourceRoot = await createTempDir("repostack-cli-pull-remote-");
+    const repo = await createRepoFixture(sourceRoot, "evt-src", "@hornjs/evt");
+    const bare = join(sourceRoot, "evt.git");
+    await execFileAsync("git", ["clone", "--bare", repo, bare]);
+
+    const config = createInitialConfig();
+    config.repos.push({
+      name: "evt",
+      path: "evt",
+      source: bare,
+      branch: "master",
+    });
+    await writeConfig(join(root, "repostack.yaml"), config);
+
+    const previousCwd = process.cwd();
+    process.chdir(root);
+
+    try {
+      const stdout = createWriter();
+      const stderr = createWriter();
+
+      const code = await main({
+        args: ["pull"],
+        stdout: stdout.stream as any,
+        stderr: stderr.stream as any,
+      });
+
+      expect(code).toBe(0);
+      expect(stdout.chunks.join("")).toContain("Starting clone: evt");
+      expect(stdout.chunks.join("")).toContain("Finished clone: evt");
+      expect(stdout.chunks.join("")).toContain("Pulled missing repos");
+      expect(stderr.chunks.join("")).toBe("");
     } finally {
       process.chdir(previousCwd);
     }

@@ -2,8 +2,9 @@ import { writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import YAML from "yaml";
+import { loadConfig, usesImplicitSource, writeConfig } from "../config";
 import type { RepostackConfig, RepostackLock } from "../types";
-import { getCurrentBranch, getHeadRevision, getRemoteUrl } from "../git";
+import { getCurrentBranch, getHeadRevision, getRemoteUrl, pathExists } from "../git";
 
 export { list as listRepos } from "./list";
 
@@ -49,6 +50,26 @@ export async function snapshot(
 ): Promise<RepostackLock> {
   const debug = options.onDebug ?? (() => {});
   const lock = await buildSnapshot(root, config, options);
+  const configPath = join(root, "repostack.yaml");
+  if (await pathExists(configPath)) {
+    const baseConfig = await loadConfig(root);
+    let configChanged = false;
+
+    for (const repo of baseConfig.repos) {
+      const remoteSource = await getRemoteUrl(join(root, repo.path), repo.branch);
+      if (remoteSource && remoteSource !== repo.source && usesImplicitSource(repo)) {
+        debug(`snapshot: updating config source for ${repo.name} -> ${remoteSource}`);
+        repo.source = remoteSource;
+        configChanged = true;
+      }
+    }
+
+    if (configChanged) {
+      debug(`snapshot: writing updated config to ${configPath}`);
+      await writeConfig(configPath, baseConfig);
+    }
+  }
+
   const path = join(root, "repostack.lock.yaml");
   debug(`snapshot: writing to ${path}`);
   await writeFile(path, YAML.stringify(lock), "utf8");

@@ -196,6 +196,10 @@ export function resolveRepoSelection(
   return repos;
 }
 
+export function usesImplicitSource(repo: Pick<RepoEntry, "path" | "source">): boolean {
+  return repo.source === repo.path;
+}
+
 export async function useRepo(
   config: RepostackConfig,
   input: { cwd: string; path: string; source?: string; branch?: string },
