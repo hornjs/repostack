@@ -10,6 +10,20 @@ export async function createTempDir(prefix: string): Promise<string> {
   return mkdtemp(join(tmpdir(), prefix));
 }
 
+export function createWriter(options?: { isTTY?: boolean }) {
+  const chunks: string[] = [];
+  return {
+    chunks,
+    stream: {
+      isTTY: options?.isTTY,
+      write(chunk: string | Uint8Array) {
+        chunks.push(String(chunk));
+        return true;
+      },
+    },
+  };
+}
+
 export async function writeJson(path: string, value: unknown): Promise<void> {
   await writeFile(path, JSON.stringify(value, null, 2));
 }

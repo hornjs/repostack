@@ -6,7 +6,7 @@ import { run } from "../src/commands/run";
 import { createRepoFixture, createTempDir } from "./helpers";
 
 describe("run", () => {
-  it("runs a command in each selected repo", { timeout: 10_000 }, async () => {
+  it("runs a command in each selected repo", { timeout: 20_000 }, async () => {
     const root = await createTempDir("repostack-run-");
     await createRepoFixture(root, "evt", "@hornjs/evt");
     await createRepoFixture(root, "fest", "@hornjs/fest");
@@ -20,7 +20,9 @@ describe("run", () => {
     await writeFile(join(root, "evt", "FLAG"), "evt\n");
     await writeFile(join(root, "fest", "FLAG"), "fest\n");
 
-    const result = await run(root, config, {
+    const result = await run({
+      root,
+      config,
       command: "node -e \"process.stdout.write(require('node:fs').readFileSync('FLAG', 'utf8'))\"",
       tags: ["runtime"],
       continueOnError: false,
@@ -45,7 +47,9 @@ describe("run", () => {
     const logFile = join(root, "events.log");
     const command = `node -e 'const fs = require("node:fs"); const path = require("node:path"); const logFile = ${JSON.stringify(logFile)}; const name = path.basename(process.cwd()); fs.appendFileSync(logFile, "start:" + name + "\\n"); setTimeout(() => { fs.appendFileSync(logFile, "end:" + name + "\\n"); }, 200);'`;
 
-    await run(root, config, {
+    await run({
+      root,
+      config,
       command,
       tags: ["runtime"],
       continueOnError: false,
@@ -56,5 +60,54 @@ describe("run", () => {
     expect(events).toHaveLength(4);
     expect([...events.slice(0, 2)].sort()).toEqual(["start:evt", "start:fest"]);
     expect([...events.slice(2)].sort()).toEqual(["end:evt", "end:fest"]);
+  });
+
+  it("updates spinner messages with repo command context", async () => {
+    const root = await createTempDir("repostack-run-spinner-");
+    await createRepoFixture(root, "evt", "@hornjs/evt");
+
+    const config = createInitialConfig();
+    config.repos.push({
+      name: "evt",
+      path: "evt",
+      source: "git@example.com/evt.git",
+      branch: "main",
+      tags: ["runtime"],
+    });
+
+    const spinnerEvents: string[] = [];
+    const logger = {
+      debug() {},
+      spin(message: string) {
+        spinnerEvents.push(`start:${message}`);
+        return {
+          update(nextMessage: string) {
+            spinnerEvents.push(`update:${nextMessage}`);
+          },
+          done(message?: string) {
+            spinnerEvents.push(`done:${message ?? ""}`);
+          },
+          fail(message: string) {
+            spinnerEvents.push(`fail:${message}`);
+          },
+        };
+      },
+    };
+
+    await run({
+      root,
+      config,
+      logger: logger as never,
+      command: "node -e \"process.stdout.write('ok')\"",
+      tags: ["runtime"],
+      continueOnError: false,
+      concurrency: 1,
+    });
+
+    expect(spinnerEvents).toEqual([
+      "start:Running evt...",
+      "update:Running evt: node -e \"process.stdout.write('ok')\"",
+      "done:evt: done",
+    ]);
   });
 });

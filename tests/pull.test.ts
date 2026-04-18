@@ -19,7 +19,7 @@ function wait(ms: number): Promise<void> {
 }
 
 describe("pull", () => {
-  it("retries failed clones up to 3 times and emits retry events", async () => {
+  it("retries failed clones up to 3 times", async () => {
     const root = await createTempDir("repostack-pull-retry-");
     const config = createInitialConfig();
     config.repos.push({
@@ -29,10 +29,11 @@ describe("pull", () => {
       branch: "main",
     });
 
-    const retries: number[] = [];
     let attempts = 0;
 
-    await pull(root, config, {
+    await pull({
+      root,
+      config,
       clone: async (_source, destination) => {
         attempts += 1;
 
@@ -47,14 +48,63 @@ describe("pull", () => {
           throw new Error(`clone failed on attempt ${attempts}`);
         }
       },
-      onRepoRetry: (_repo, attempt) => {
-        retries.push(attempt);
-      },
     });
 
     expect(attempts).toBe(3);
-    expect(retries).toEqual([2, 3]);
     expect(await exists(join(root, "evt", "attempt-3.txt"))).toBe(true);
+  });
+
+  it("updates spinner messages while retrying clones", async () => {
+    const root = await createTempDir("repostack-pull-spinner-");
+    const config = createInitialConfig();
+    config.repos.push({
+      name: "evt",
+      path: "evt",
+      source: "git@example.com/evt.git",
+      branch: "main",
+    });
+
+    const spinnerEvents: string[] = [];
+    let attempts = 0;
+    const logger = {
+      debug() {},
+      warn() {},
+      spin(message: string) {
+        spinnerEvents.push(`start:${message}`);
+        return {
+          update(nextMessage: string) {
+            spinnerEvents.push(`update:${nextMessage}`);
+          },
+          done(message?: string) {
+            spinnerEvents.push(`done:${message ?? ""}`);
+          },
+          fail(message: string) {
+            spinnerEvents.push(`fail:${message}`);
+          },
+        };
+      },
+    };
+
+    await pull({
+      root,
+      config,
+      logger: logger as never,
+      clone: async () => {
+        attempts += 1;
+        if (attempts < 3) {
+          throw new Error(`clone failed on attempt ${attempts}`);
+        }
+      },
+    });
+
+    expect(spinnerEvents).toEqual([
+      "start:Cloning evt...",
+      "update:Retrying evt... (2/3)",
+      "update:Cloning evt... (2/3)",
+      "update:Retrying evt... (3/3)",
+      "update:Cloning evt... (3/3)",
+      "done:Cloned evt (3 attempts)",
+    ]);
   });
 
   it("clones missing repos with configured concurrency", async () => {
@@ -68,7 +118,9 @@ describe("pull", () => {
 
     const events: string[] = [];
 
-    await pull(root, config, {
+    await pull({
+      root,
+      config,
       clone: async (_source, destination) => {
         const repo = destination.split("/").pop()!;
         events.push(`start:${repo}`);

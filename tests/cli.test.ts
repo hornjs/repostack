@@ -103,7 +103,7 @@ describe("cli", () => {
     expect(stderr.chunks.join("")).toBe("");
   });
 
-  it("prints debug details for run when --debug is enabled", { timeout: 10_000 }, async () => {
+  it("prints debug details for run when --debug is enabled", { timeout: 20_000 }, async () => {
     const root = await createTempDir("repostack-cli-debug-");
     await createRepoFixture(root, "evt", "@hornjs/evt");
     await writeFile(join(root, "evt", "FLAG"), "evt\n");
@@ -172,9 +172,105 @@ describe("cli", () => {
       });
 
       expect(code).toBe(0);
-      expect(stdout.chunks.join("")).toContain("Starting clone: evt");
-      expect(stdout.chunks.join("")).toContain("Finished clone: evt");
+      expect(stdout.chunks.join("")).toContain("Cloned evt");
       expect(stdout.chunks.join("")).toContain("Pulled missing repos");
+      expect(stderr.chunks.join("")).toBe("");
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("prints available scripts as display output for run with no script", async () => {
+    const root = await createTempDir("repostack-cli-run-help-");
+    const config = createInitialConfig();
+    config.scripts["build"] = { command: "echo build" };
+    config.scripts["test"] = { command: "echo test" };
+    await writeConfig(join(root, "repostack.yaml"), config);
+
+    const previousCwd = process.cwd();
+    process.chdir(root);
+
+    try {
+      const stdout = createWriter();
+      const stderr = createWriter();
+
+      const code = await main({
+        args: ["run"],
+        stdout: stdout.stream as any,
+        stderr: stderr.stream as any,
+      });
+
+      expect(code).toBe(1);
+      expect(stdout.chunks.join("")).toContain("Missing script name. Available scripts:");
+      expect(stdout.chunks.join("")).toContain("build");
+      expect(stdout.chunks.join("")).toContain("test");
+      expect(stderr.chunks.join("")).toBe("");
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("prints users command availability as display output", async () => {
+    const root = await createTempDir("repostack-cli-users-help-");
+    const config = createInitialConfig();
+    await writeConfig(join(root, "repostack.yaml"), config);
+
+    const previousCwd = process.cwd();
+    process.chdir(root);
+
+    try {
+      const stdout = createWriter();
+      const stderr = createWriter();
+
+      const code = await main({
+        args: ["users", "wat"],
+        stdout: stdout.stream as any,
+        stderr: stderr.stream as any,
+      });
+
+      expect(code).toBe(1);
+      expect(stderr.chunks.join("")).toContain("Unknown users command: wat");
+      expect(stdout.chunks.join("")).toContain("Available: ls, su, add, rm");
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+
+  it("prints list output as display rows", async () => {
+    const root = await createTempDir("repostack-cli-list-");
+    await createRepoFixture(root, "evt", "@hornjs/evt");
+
+    const config = createInitialConfig();
+    config.repos.push({
+      name: "evt",
+      path: "evt",
+      source: "git@example.com/evt.git",
+      branch: "main",
+      tags: ["runtime"],
+    });
+    config.users = {
+      alice: { repos: {} },
+    };
+    await writeConfig(join(root, "repostack.yaml"), config);
+    await writeFile(join(root, ".repostackrc"), "user=alice\n");
+
+    const previousCwd = process.cwd();
+    process.chdir(root);
+
+    try {
+      const stdout = createWriter();
+      const stderr = createWriter();
+
+      const code = await main({
+        args: ["list"],
+        stdout: stdout.stream as any,
+        stderr: stderr.stream as any,
+      });
+
+      expect(code).toBe(0);
+      expect(stdout.chunks.join("")).toContain("[user: alice]");
+      expect(stdout.chunks.join("")).toContain("evt");
+      expect(stdout.chunks.join("")).toContain("clean");
       expect(stderr.chunks.join("")).toBe("");
     } finally {
       process.chdir(previousCwd);

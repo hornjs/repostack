@@ -27,7 +27,7 @@ describe("stack state", () => {
     });
     await writeConfig(join(root, "repostack.yaml"), config);
 
-    const rows = await listRepos(root, config);
+    const rows = await listRepos({ root, config });
 
     expect(rows).toHaveLength(1);
     expect(rows[0].name).toBe("evt");
@@ -45,7 +45,7 @@ describe("stack state", () => {
       branch: "main",
     });
 
-    const lock = await buildSnapshot(root, config);
+    const lock = await buildSnapshot(root, config, undefined);
 
     expect(lock.version).toBe(1);
     expect(lock.repos.evt.revision).toMatch(/[0-9a-f]{7,40}/);
@@ -65,7 +65,7 @@ describe("stack state", () => {
       branch: "main",
     });
 
-    const lock = await buildSnapshot(root, config);
+    const lock = await buildSnapshot(root, config, undefined);
 
     expect(lock.repos.evt.source).toBe("git@github.com:hornjs/evt.git");
   });
@@ -85,7 +85,7 @@ describe("stack state", () => {
     });
     await writeConfig(join(root, "repostack.yaml"), config);
 
-    await snapshot(root, config);
+    await snapshot({ root, config });
     const updatedConfig = await loadConfig(root);
 
     expect(updatedConfig.repos[0].source).toBe("git@github.com:hornjs/evt.git");
@@ -106,7 +106,7 @@ describe("stack state", () => {
     });
     await writeConfig(join(root, "repostack.yaml"), config);
 
-    await snapshot(root, config);
+    await snapshot({ root, config });
     const updatedConfig = await loadConfig(root);
 
     expect(updatedConfig.repos[0].source).toBe("git@github.com:custom/evt.git");
@@ -128,8 +128,8 @@ describe("stack state", () => {
       branch: "master",
     });
 
-    await pull(root, config);
-    const rows = await listRepos(root, config);
+    await pull({ root, config });
+    const rows = await listRepos({ root, config });
 
     expect(rows[0].name).toBe("evt");
   });
@@ -166,10 +166,13 @@ describe("stack state", () => {
       "utf8",
     );
 
-    await pull(root, config);
-    const rows = await listRepos(root, {
-      ...config,
-      repos: [{ ...config.repos[0], source: bare }],
+    await pull({ root, config });
+    const rows = await listRepos({
+      root,
+      config: {
+        ...config,
+        repos: [{ ...config.repos[0], source: bare }],
+      },
     });
 
     expect(rows[0].name).toBe("evt");
@@ -210,7 +213,7 @@ describe("stack state", () => {
       "utf8",
     );
 
-    await pull(root, config);
+    await pull({ root, config });
     const { stdout } = await execFileAsync("git", ["remote", "get-url", "origin"], {
       cwd: join(root, "evt"),
     });
@@ -229,7 +232,7 @@ describe("stack state", () => {
       branch: "main",
     });
 
-    const lock = await sync(root, config, { yes: true });
+    const lock = await sync({ root, config, yes: true });
 
     expect(lock.repos.evt.revision).toMatch(/[0-9a-f]{7,40}/);
   });

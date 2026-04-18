@@ -75,7 +75,7 @@ describe("config", () => {
   it("initializes repostack.yaml when missing", async () => {
     const root = await createTempDir("repostack-init-");
 
-    await init(root);
+    await init({ root });
     const loaded = await loadConfig(root);
 
     expect(loaded.version).toBe(1);
@@ -87,7 +87,7 @@ describe("config", () => {
     await createRepoFixture(root, "evt", "@hornjs/evt");
     await writeConfig(join(root, "repostack.yaml"), createInitialConfig());
 
-    await use(root, "evt", { yes: true });
+    await use({ root, repoPath: "evt", yes: true });
     const loaded = await loadConfig(root);
 
     expect(loaded.repos).toHaveLength(1);
@@ -105,7 +105,7 @@ describe("config", () => {
     });
     await writeConfig(join(root, "repostack.yaml"), createInitialConfig());
 
-    await use(root, "evt", { yes: true });
+    await use({ root, repoPath: "evt", yes: true });
     const loaded = await loadConfig(root);
 
     expect(loaded.repos[0].source).toBe("git@github.com:hornjs/evt.git");
@@ -121,7 +121,7 @@ describe("config", () => {
     await writeJson(join(repoDir, "package.json"), { name: "newrepo", version: "0.0.0" });
 
     // Use --yes to auto-initialize
-    await use(root, "newrepo", { yes: true });
+    await use({ root, repoPath: "newrepo", yes: true });
 
     // Verify git was initialized
     const gitDir = join(repoDir, ".git");
@@ -159,7 +159,7 @@ describe("config", () => {
     config.repos.push({ name: "evt", path: "evt", source: "git@example.com/evt.git", branch: "main" });
     await writeConfig(join(root, "repostack.yaml"), config);
 
-    await remove(root, "evt", { yes: true });
+    await remove({ root, repoName: "evt", yes: true });
     const loaded = await loadConfig(root);
 
     expect(loaded.repos).toHaveLength(0);
