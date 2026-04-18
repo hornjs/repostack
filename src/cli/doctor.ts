@@ -1,40 +1,26 @@
 import type { CAC } from "cac";
 import { doctor } from "../commands/doctor";
-import type { DoctorIssue } from "../commands/doctor";
-import { S_ERROR, S_WARN, S_INFO } from "./context";
-import type { CliContext } from "./context";
+import type { CliContext } from "./types";
 
-export function registerDoctor(cli: CAC, ctx: CliContext): void {
-  const { stdout, stderr, colors, onExitCode, debug } = ctx;
-
+export function registerDoctor(cli: CAC, { logger, onExitCode }: CliContext): void {
   cli
     .command("doctor", "Diagnose stack configuration and health")
     .action(async () => {
-      debug("command=doctor");
+      logger.debug("command=doctor");
 
-      function printIssue(issue: DoctorIssue) {
-        switch (issue.type) {
-          case "error":
-            stderr.write(`${colors.red(S_ERROR)} ${issue.message}\n`);
-            break;
-          case "warning":
-            stdout.write(`${colors.yellow(S_WARN)} ${issue.message}\n`);
-            break;
-          case "info":
-            stdout.write(`${colors.green(S_INFO)} ${issue.message}\n`);
-            break;
-        }
-      }
+      await doctor({
+        root: process.cwd(),
+        logger,
+      });
 
-      const result = await doctor(process.cwd(), { onDebug: debug, onIssue: printIssue });
-
-      if (result.hasErrors) {
+      logger.stdout.write("\n");
+      if (logger.issuer.hasErrors) {
         onExitCode(1);
-        stderr.write(`\n${colors.red("Found errors. Please fix them above.")}\n`);
-      } else if (result.hasWarnings) {
-        stdout.write(`\n${colors.yellow("Found warnings. Review them above.")}\n`);
+        logger.error("Found errors. Please fix them above.");
+      } else if (logger.issuer.hasWarnings) {
+        logger.warn("Found warnings. Review them above.");
       } else {
-        stdout.write(`\n${colors.green("All checks passed!")}\n`);
+        logger.info("All checks passed!");
       }
     });
 }

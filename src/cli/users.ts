@@ -2,44 +2,48 @@ import type { CAC } from "cac";
 import { isCancel, select } from "@clack/prompts";
 import { loadConfig, loadRepostackrc, repostackrcExists } from "../shared/config";
 import { listUsers, setUser, unsetUser } from "../commands/users";
-import type { CliContext } from "./context";
+import type { CliContext } from "./types";
+import type { Logger } from "logtra";
 
-async function runInteractiveUsers(
-  root: string,
-  ctx: CliContext,
-): Promise<void> {
-  const { stdout, colors, debug } = ctx;
+function printUsersGuide(logger: Logger): void {
+  logger.log("To add a user, edit repostack.yaml and add:");
+  logger.log("  users:");
+  logger.log("    alice:");
+  logger.log("      repos: {}");
+}
 
+function printUsersSummary(logger: Logger, userNames: string[], currentUser: string | null): void {
+  if (currentUser) {
+    logger.info(`Current user: ${currentUser}`);
+  } else {
+    logger.warn("No user selected.");
+  }
+  logger.log(`<dim>Available users:</dim> ${userNames.join(", ")}`);
+  logger.log("Commands:");
+  logger.log("  repostack users ls             List users");
+  logger.log("  repostack users su <name>      Switch to user");
+  logger.log("  repostack users add <name>     Add user (edit config)");
+  logger.log("  repostack users rm             Unset user");
+}
+
+async function runInteractiveUsers(root: string, logger: Logger): Promise<void> {
   const baseConfig = await loadConfig(root);
   const hasUsers = baseConfig.users && Object.keys(baseConfig.users).length > 0;
   const rcExists = await repostackrcExists(root);
   const currentUser = rcExists ? await loadRepostackrc(root) : null;
 
-  debug(`interactive users: hasUsers=${hasUsers}, currentUser=${currentUser}`);
+  logger.debug(`interactive users: hasUsers=${hasUsers}, currentUser=${currentUser}`);
 
   if (!hasUsers) {
-    stdout.write(`${colors.yellow("No users defined in this stack.")}\n`);
-    stdout.write(`\nTo add a user, edit repostack.yaml and add:\n`);
-    stdout.write(`  users:\n`);
-    stdout.write(`    alice:\n`);
-    stdout.write(`      repos: {}\n`);
+    logger.warn("No users defined in this stack.");
+    printUsersGuide(logger);
     return;
   }
 
   const userNames = Object.keys(baseConfig.users!);
 
-  if (!stdout.isTTY) {
-    if (currentUser) {
-      stdout.write(`${colors.green(`Current user:`)} ${currentUser}\n`);
-    } else {
-      stdout.write(`${colors.dim("No user selected.")}\n`);
-    }
-    stdout.write(`\n${colors.dim("Available users:")} ${userNames.join(", ")}\n`);
-    stdout.write(`\nCommands:\n`);
-    stdout.write(`  repostack users ls             List users\n`);
-    stdout.write(`  repostack users su <name>      Switch to user\n`);
-    stdout.write(`  repostack users add <name>     Add user (edit config)\n`);
-    stdout.write(`  repostack users rm             Unset user\n`);
+  if (!logger.stdout.isTTY) {
+    printUsersSummary(logger, userNames, currentUser);
     return;
   }
 
@@ -57,9 +61,9 @@ async function runInteractiveUsers(
   switch (action) {
     case "ls": {
       if (userNames.length === 0) {
-        stdout.write(`${colors.dim("No users defined in this stack.")}\n`);
+        logger.warn("No users defined in this stack.");
       } else {
-        stdout.write(`Available users: ${userNames.join(", ")}\n`);
+        logger.log(`Available users: ${userNames.join(", ")}`);
       }
       break;
     }
@@ -70,20 +74,18 @@ async function runInteractiveUsers(
       });
       if (isCancel(picked) || typeof picked !== "string") return;
       await setUser(root, picked);
-      stdout.write(`${colors.green(`Switched to user: ${picked}`)}\n`);
+      logger.info(`Switched to user: ${picked}`);
       break;
     }
     case "rm": {
       await unsetUser(root);
-      stdout.write(`${colors.green("Unset user. Using default configuration.")}\n`);
+      logger.info("Unset user. Using default configuration.");
       break;
     }
   }
 }
 
-export function registerUsers(cli: CAC, ctx: CliContext): void {
-  const { stdout, stderr, colors, onExitCode, debug } = ctx;
-
+export function registerUsers(cli: CAC, { logger, onExitCode }: CliContext): void {
   cli
     .command("users [command] [name]", "Manage user configuration for this stack")
     .example("repostack users             # Interactive mode")
@@ -92,11 +94,11 @@ export function registerUsers(cli: CAC, ctx: CliContext): void {
     .example("repostack users add bob     # Add user")
     .example("repostack users rm          # Unset user")
     .action(async (command?: string, name?: string) => {
-      debug(`command=users subcommand=${command ?? "(interactive)"}`);
+      logger.debug(`command=users subcommand=${command ?? "(interactive)"}`);
       const cwd = process.cwd();
 
       if (!command) {
-        await runInteractiveUsers(cwd, ctx);
+        await runInteractiveUsers(cwd, logger);
         return;
       }
 
@@ -104,19 +106,20 @@ export function registerUsers(cli: CAC, ctx: CliContext): void {
         case "ls": {
           const { users } = await listUsers(cwd);
           if (users.length === 0) {
-            stdout.write(`${colors.dim("No users defined in this stack.")}\n`);
+            logger.warn("No users defined in this stack.");
+            printUsersGuide(logger);
           } else {
-            stdout.write(`Available users: ${users.join(", ")}\n`);
+            logger.log(`Available users: ${users.join(", ")}`);
           }
           break;
         }
 
         case "su": {
           if (!name) {
-            if (stdout.isTTY) {
+            if (logger.stdout.isTTY) {
               const { users } = await listUsers(cwd);
               if (users.length === 0) {
-                stderr.write(`${colors.red("No users defined.")}\n`);
+                logger.error("No users defined.");
                 onExitCode(1);
                 return;
               }
@@ -125,42 +128,42 @@ export function registerUsers(cli: CAC, ctx: CliContext): void {
                 options: users.map((u) => ({ value: u, label: u })),
               });
               if (isCancel(picked) || typeof picked !== "string") {
-                stderr.write(`${colors.red("Aborted.")}\n`);
+                logger.error("Aborted.");
                 onExitCode(1);
                 return;
               }
               name = picked;
             } else {
-              stderr.write(`${colors.red("Missing user name. Usage: repostack users su <name>")}\n`);
+              logger.error("Missing user name. Usage: repostack users su <name>");
               onExitCode(1);
               return;
             }
           }
           await setUser(cwd, name);
-          stdout.write(`${colors.green(`Switched to user: ${name}`)}\n`);
+          logger.info(`Switched to user: ${name}`);
           break;
         }
 
         case "add": {
           if (!name) {
-            stderr.write(`${colors.red("Missing user name. Usage: repostack users add <name>")}\n`);
+            logger.error("Missing user name. Usage: repostack users add <name>");
             onExitCode(1);
             return;
           }
-          stderr.write(`${colors.yellow("Not implemented yet. Please edit repostack.yaml manually.")}\n`);
+          logger.warn("Not implemented yet. Please edit repostack.yaml manually.");
           onExitCode(1);
           break;
         }
 
         case "rm": {
           await unsetUser(cwd);
-          stdout.write(`${colors.green("Unset user. Using default configuration.")}\n`);
+          logger.info("Unset user. Using default configuration.");
           break;
         }
 
         default: {
-          stderr.write(`${colors.red(`Unknown users command: ${command}`)}\n`);
-          stderr.write(`${colors.dim("Available: ls, su, add, rm")}\n`);
+          logger.error(`Unknown users command: ${command}`);
+          logger.log("Available: ls, su, add, rm");
           onExitCode(1);
         }
       }

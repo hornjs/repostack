@@ -3,33 +3,42 @@ import { confirm, isCancel } from "@clack/prompts";
 import type { RepostackConfig, RepostackLock } from "../shared/types";
 import { checkoutRevision, fetchRepo, isDirty } from "../shared/git";
 import { loadLock } from "../shared/lock";
+import type { Logger } from "logtra";
 import { pull } from "./pull";
 import { snapshot } from "./snapshot";
 
-export async function sync(
-  root: string,
-  config: RepostackConfig,
-  options: { onDebug?: (message: string) => void; yes?: boolean } = {},
-): Promise<RepostackLock> {
-  const debug = options.onDebug ?? (() => {});
-  debug(`sync: root=${root} repos=${config.repos.length}`);
+type SyncOptions = {
+  root: string;
+  config: RepostackConfig;
+  logger?: Logger;
+  concurrency?: number;
+  yes?: boolean;
+};
 
-  await pull(root, config, options);
-  const lock = await loadLock(root, options);
-  debug(`sync: lock file ${lock ? "found" : "not found"}`);
+export async function sync({
+  root,
+  config,
+  logger,
+  ...options
+}: SyncOptions): Promise<RepostackLock> {
+  logger?.debug(`sync: root=${root} repos=${config.repos.length}`);
+
+  await pull({ root, config, logger, ...options });
+  const lock = await loadLock(root, logger);
+  logger?.debug(`sync: lock file ${lock ? "found" : "not found"}`);
 
   for (const repo of config.repos) {
     const cwd = join(root, repo.path);
-    debug(`sync: fetching ${repo.name}`);
+    logger?.debug(`sync: fetching ${repo.name}`);
     await fetchRepo(cwd);
     const pinned = lock?.repos[repo.name]?.revision;
     if (pinned) {
-      debug(`sync: checking out ${repo.name} @ ${pinned.slice(0, 12)}`);
+      logger?.debug(`sync: checking out ${repo.name} @ ${pinned.slice(0, 12)}`);
 
       const dirty = await isDirty(cwd);
       if (dirty) {
         if (options.yes) {
-          debug(`sync: ${repo.name} has uncommitted changes, proceeding because --yes is set`);
+          logger?.debug(`sync: ${repo.name} has uncommitted changes, proceeding because --yes is set`);
         } else {
           const answer = await confirm({
             message: `Repo "${repo.name}" has uncommitted changes. Checkout ${pinned.slice(0, 12)} anyway?`,
@@ -45,5 +54,5 @@ export async function sync(
     }
   }
 
-  return snapshot(root, config, options);
+  return snapshot({ root, config, logger });
 }

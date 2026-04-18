@@ -1,17 +1,20 @@
 import type { CAC } from "cac";
 import { snapshot } from "../commands/snapshot";
 import { loadConfigWithUser } from "../shared/config";
-import type { CliContext } from "./context";
+import type { CliContext } from "./types";
 
-export function registerSnapshot(cli: CAC, ctx: CliContext): void {
-  const { stdout, colors, debug } = ctx;
-
+export function registerSnapshot(cli: CAC, { logger }: CliContext): void {
   cli
     .command("snapshot", "Write repostack.lock.yaml from current repo revisions")
     .action(async () => {
-      debug("command=snapshot");
-      const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-      await snapshot(process.cwd(), config, { onDebug: debug });
-      stdout.write(`${colors.green("Wrote repostack.lock.yaml")}\n`);
+      logger.debug("command=snapshot");
+      const root = process.cwd();
+      const { config } = await loadConfigWithUser(root, logger);
+      await snapshot({
+        root,
+        config,
+        logger,
+      });
+      logger.info("Wrote repostack.lock.yaml");
     });
 }

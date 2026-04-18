@@ -1,8 +1,7 @@
 import { format } from "node:util";
 import { cac, type CAC } from "cac";
-import pico from "picocolors";
 import packageJson from "../../package.json";
-import { type MainOptions, type CliContext } from "./context";
+import type { CliContext } from "./types";
 import { registerInit } from "./init";
 import { registerUse } from "./use";
 import { registerRemove } from "./remove";
@@ -14,29 +13,21 @@ import { registerSync } from "./sync";
 import { registerList } from "./list";
 import { registerRun } from "./run";
 import { registerSnapshot } from "./snapshot";
+import { Logger, type Options as LoggerOptions } from "logtra";
 
-export type { MainOptions, CliContext };
-
-function createColors(
-  stdout: MainOptions["stdout"],
-  stderr: MainOptions["stderr"],
-): ReturnType<typeof pico.createColors> {
-  const enabled = Boolean(stdout.isTTY || stderr.isTTY);
-  return pico.createColors(enabled);
-}
+export type { CliContext };
 
 async function withPatchedConsole<T>(
-  stdout: MainOptions["stdout"],
-  stderr: MainOptions["stderr"],
+  logger: Logger,
   fn: () => Promise<T>,
 ): Promise<T> {
   const originalLog = console.log;
   const originalInfo = console.info;
   const originalError = console.error;
 
-  console.log = (...args: unknown[]) => { stdout.write(`${format(...args)}\n`); };
-  console.info = (...args: unknown[]) => { stdout.write(`${format(...args)}\n`); };
-  console.error = (...args: unknown[]) => { stderr.write(`${format(...args)}\n`); };
+  console.log = (...args: unknown[]) => { logger.log(format(...args)); };
+  console.info = (...args: unknown[]) => { logger.info(format(...args)); };
+  console.error = (...args: unknown[]) => { logger.error(format(...args)); };
 
   try {
     return await fn();
@@ -68,40 +59,43 @@ function createCLI(ctx: CliContext): CAC {
   return cli;
 }
 
-export async function main({ args, stdout, stderr }: MainOptions): Promise<number> {
-  const colors = createColors(stdout, stderr);
-  let exitCode = 0;
+export type MainOptions = LoggerOptions & {
+  args?: string[];
+};
 
-  const cli = createCLI({
+export async function main({ args = [], ...options }: MainOptions): Promise<number> {
+  const { stdout = process.stdout, stderr = process.stderr } = options;
+  let exitCode = 0;
+  const debug = options.debug ?? (args.includes("--debug") || args.includes("-d"));
+
+  const logger = new Logger({
+    ...options,
+    debug,
+    stripColorTags: options.stripColorTags ?? true,
     stdout,
     stderr,
-    colors,
+  })
+
+  const ctx: CliContext = {
     onExitCode: (code) => { exitCode = code; },
-    debug: (msg: string) => {
-      if (cli.options.debug) {
-        stderr.write(`${colors.dim(`[debug] ${msg}`)}\n`);
-      }
-    },
-  });
+    logger,
+  };
+
+  const cli = createCLI(ctx);
 
   try {
-    await withPatchedConsole(stdout, stderr, async () => {
+    await withPatchedConsole(logger, async () => {
       cli.parse(["node", "repostack", ...args], { run: false });
 
-      const debug = (msg: string) => {
-        if (cli.options.debug) {
-          stderr.write(`${colors.dim(`[debug] ${msg}`)}\n`);
-        }
-      };
-      debug(`argv=${JSON.stringify(args)} command=${cli.matchedCommandName ?? "(none)"}`);
+      logger.debug(`argv=${JSON.stringify(args)} command=${cli.matchedCommandName ?? "(none)"}`);
 
       const firstArg = args[0];
       if (firstArg && !firstArg.startsWith("-")) {
         const knownCommands = cli.commands.map(c => c.name.split(" ")[0]);
         const inputCmd = firstArg.split(" ")[0];
         if (!knownCommands.includes(inputCmd)) {
-          stderr.write(`${colors.red(`Unknown command: ${firstArg}`)}\n`);
-          stderr.write(`${colors.dim("Run `repostack --help` for usage.")}\n`);
+          logger.error(`Unknown command: ${firstArg}`);
+          logger.error("<dim>Run `repostack --help` for usage.</dim>", { colorable: false });
           exitCode = 1;
           return;
         }
@@ -120,7 +114,7 @@ export async function main({ args, stdout, stderr }: MainOptions): Promise<numbe
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    stderr.write(`${colors.red(message)}\n`);
+    logger.error(message);
     exitCode = 1;
   }
 

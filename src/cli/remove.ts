@@ -1,16 +1,23 @@
 import type { CAC } from "cac";
 import { remove } from "../commands/remove";
-import type { CliContext } from "./context";
+import type { CliContext } from "./types";
 
-export function registerRemove(cli: CAC, ctx: CliContext): void {
-  const { stdout, colors, debug } = ctx;
-
+export function registerRemove(cli: CAC, { logger }: CliContext): void {
   cli
     .command("remove <name>", "Remove a repo from the current stack")
     .option("-y, --yes", "Skip confirmation prompt")
     .action(async (repoName?: string, opts?: { yes?: boolean }) => {
-      debug(`command=remove repoName=${repoName} yes=${opts?.yes ?? false}`);
-      await remove(process.cwd(), repoName!, { yes: opts?.yes, onDebug: debug });
-      stdout.write(`${colors.green("Removed repo:")} ${repoName}\n`);
+      if (!repoName) {
+        logger.error("Please provide a repo name to remove");
+        return;
+      }
+      logger.debug(`command=remove repoName=${repoName} yes=${opts?.yes ?? false}`);
+      await remove({
+        root: process.cwd(),
+        repoName,
+        logger,
+        yes: opts?.yes,
+      });
+      logger.info(`Removed repo: ${repoName}`);
     });
 }

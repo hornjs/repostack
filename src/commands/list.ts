@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { RepoEntry, RepostackConfig } from "../shared/types";
 import { getCurrentBranch, getHeadRevision, isDirty } from "../shared/git";
+import type { Logger } from "logtra";
 
 export type RepoListRow = {
   name: string;
@@ -11,19 +12,25 @@ export type RepoListRow = {
   tags: string[];
 };
 
-export async function list(
-  root: string,
-  config: RepostackConfig,
-  repos: RepoEntry[] = config.repos,
-  options: { onDebug?: (message: string) => void } = {},
-): Promise<RepoListRow[]> {
-  const debug = options.onDebug ?? (() => {});
-  debug(`list: processing ${repos.length} repos`);
+type ListOptions = {
+  root: string;
+  config: RepostackConfig;
+  repos?: RepoEntry[];
+  logger?: Logger;
+};
+
+export async function list({
+  root,
+  config,
+  repos = config.repos,
+  logger,
+}: ListOptions): Promise<RepoListRow[]> {
+  logger?.debug(`list: processing ${repos.length} repos`);
 
   return Promise.all(
     repos.map(async (repo) => {
       const cwd = join(root, repo.path);
-      debug(`list: reading ${repo.name} at ${cwd}`);
+      logger?.debug(`list: reading ${repo.name} at ${cwd}`);
       return {
         name: repo.name,
         path: repo.path,

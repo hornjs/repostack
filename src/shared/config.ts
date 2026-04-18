@@ -3,6 +3,7 @@ import { basename, join, relative } from "node:path";
 import { platform } from "node:process";
 import YAML from "yaml";
 import type { RepoEntry, RepostackConfig, ShellConfig, UserConfig } from "./types";
+import type { DebugContext } from "./output";
 
 const REPOSTACK_RC = ".repostackrc";
 
@@ -46,29 +47,27 @@ export function mergeUserConfig(
   userConfig: UserConfig,
 ): RepostackConfig {
   const next = structuredClone(baseConfig);
-  
+
   for (const [repoName, overrides] of Object.entries(userConfig.repos)) {
     const repo = next.repos.find((r) => r.name === repoName);
     if (repo) {
       Object.assign(repo, overrides);
     }
   }
-  
+
   return next;
 }
 
 export async function loadConfigWithUser(
   root: string,
-  options: { onDebug?: (message: string) => void } = {},
+  logger: DebugContext | undefined,
 ): Promise<{ config: RepostackConfig; user: string | null }> {
-  const debug = options.onDebug ?? (() => {});
-  
   const baseConfig = await loadConfig(root);
   const userName = await loadRepostackrc(root);
-  
-  debug(`config: loaded base config, users=${Object.keys(baseConfig.users ?? {}).join(",") || "(none)"}`);
-  debug(`config: current user=${userName ?? "(none)"}`);
-  
+
+  logger?.debug(`config: loaded base config, users=${Object.keys(baseConfig.users ?? {}).join(",") || "(none)"}`);
+  logger?.debug(`config: current user=${userName ?? "(none)"}`);
+
   // If users are defined, a user must be selected
   if (baseConfig.users && Object.keys(baseConfig.users).length > 0) {
     if (!userName) {
@@ -78,17 +77,17 @@ export async function loadConfigWithUser(
         `Run: repostack user <name>`
       );
     }
-    
+
     const userConfig = baseConfig.users[userName];
     if (!userConfig) {
       throw new Error(`Unknown user: ${userName}`);
     }
-    
+
     const merged = mergeUserConfig(baseConfig, userConfig);
-    debug(`config: applied user overrides for ${userName}`);
+    logger?.debug(`config: applied user overrides for ${userName}`);
     return { config: merged, user: userName };
   }
-  
+
   // No users defined, use base config
   return { config: baseConfig, user: userName };
 }
@@ -111,26 +110,26 @@ export function resolveShell(shell: ShellConfig | undefined): string {
   if (shell === undefined) {
     return getDefaultShell();
   }
-  
+
   // If it's a string, use directly
   if (typeof shell === "string") {
     return shell;
   }
-  
+
   // Map Node.js platform to config keys
   const platformMap: Record<string, keyof typeof shell> = {
     win32: "windows",
     darwin: "macos",
     linux: "linux",
   };
-  
+
   const configKey = platformMap[platform];
   const platformShell = configKey ? shell[configKey] : undefined;
-  
+
   if (platformShell) {
     return platformShell;
   }
-  
+
   // Fallback: try macos <-> linux
   if (platform === "darwin" && shell.linux) {
     return shell.linux;
@@ -138,13 +137,13 @@ export function resolveShell(shell: ShellConfig | undefined): string {
   if (platform === "linux" && shell.macos) {
     return shell.macos;
   }
-  
+
   // Use any available shell from the object
   const availableShells = Object.values(shell).filter(Boolean);
   if (availableShells.length > 0) {
     return availableShells[0];
   }
-  
+
   return getDefaultShell();
 }
 

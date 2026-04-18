@@ -1,26 +1,28 @@
 import type { CAC } from "cac";
 import { init } from "../commands/init";
-import type { CliContext } from "./context";
+import type { CliContext } from "./types";
 
-export function registerInit(cli: CAC, ctx: CliContext): void {
-  const { stdout, colors, debug } = ctx;
-
+export function registerInit(cli: CAC, { logger }: CliContext): void {
   cli
     .command("init", "Initialize repostack.yaml in the current directory")
     .option("-y, --yes", "Auto-initialize git repo if not exists")
     .action(async (opts?: { yes?: boolean }) => {
-      debug(`command=init yes=${opts?.yes ?? false}`);
-      const result = await init(process.cwd(), { onDebug: debug, yes: opts?.yes });
+      logger.debug(`command=init yes=${opts?.yes ?? false}`);
+      const result = await init({
+        root: process.cwd(),
+        logger,
+        yes: opts?.yes,
+      });
       if (result.configCreated) {
-        stdout.write(`${colors.green("Initialized repostack.yaml")}\n`);
+        logger.info("Initialized repostack.yaml");
       } else {
-        stdout.write(`${colors.yellow("repostack.yaml already exists")}\n`);
+        logger.warn("repostack.yaml already exists");
       }
       if (result.gitInitialized) {
-        stdout.write(`${colors.green("Initialized git repository")}\n`);
+        logger.info("Initialized git repository");
       }
       if (result.gitignoreUpdated) {
-        stdout.write(`${colors.green("Updated .gitignore with .repostackrc")}\n`);
+        logger.info("Updated .gitignore with .repostackrc");
       }
     });
 }

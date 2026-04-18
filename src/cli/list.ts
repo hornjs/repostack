@@ -1,24 +1,29 @@
 import type { CAC } from "cac";
 import { list } from "../commands/list";
 import { loadConfigWithUser } from "../shared/config";
-import type { CliContext } from "./context";
+import type { CliContext } from "./types";
 
-export function registerList(cli: CAC, ctx: CliContext): void {
-  const { stdout, colors, debug } = ctx;
-
+export function registerList(cli: CAC, { logger }: CliContext): void {
   cli
     .command("list", "Show the current branch, revision, and dirty state for each repo")
     .action(async () => {
-      debug("command=list");
-      const { config, user } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
+      logger.debug("command=list");
+
+      const root = process.cwd();
+
+      const { config, user } = await loadConfigWithUser(root, logger);
       if (user) {
-        stdout.write(`${colors.dim(`[user: ${user}]`)}\n`);
+        logger.log(`<dim>[user: ${user}]</dim>`);
       }
-      const rows = await list(process.cwd(), config, undefined, { onDebug: debug });
+      const rows = await list({
+        root,
+        config,
+        logger,
+      });
 
       for (const row of rows) {
-        const status = row.dirty ? colors.yellow("dirty") : colors.green("clean");
-        stdout.write(`${row.name}\t${row.branch}\t${row.revision}\t${status}\n`);
+        const status = row.dirty ? "<yellow>dirty</yellow>" : "<green>clean</green>";
+        logger.log(`${row.name}\t${row.branch}\t${row.revision}\t${status}`);
       }
     });
 }

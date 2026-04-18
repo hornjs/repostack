@@ -1,18 +1,22 @@
 import type { CAC } from "cac";
 import { sync } from "../commands/sync";
 import { loadConfigWithUser } from "../shared/config";
-import type { CliContext } from "./context";
+import type { CliContext } from "./types";
 
-export function registerSync(cli: CAC, ctx: CliContext): void {
-  const { stdout, colors, debug } = ctx;
-
+export function registerSync(cli: CAC, { logger }: CliContext): void {
   cli
     .command("sync", "Fetch and checkout revisions from the current lock file")
     .option("-y, --yes", "Skip confirmation prompts for uncommitted changes")
     .action(async (opts?: { yes?: boolean }) => {
-      debug("command=sync");
-      const { config } = await loadConfigWithUser(process.cwd(), { onDebug: debug });
-      await sync(process.cwd(), config, { onDebug: debug, yes: opts?.yes });
-      stdout.write(`${colors.green("Synchronized stack")}\n`);
+      logger.debug("command=sync");
+      const root = process.cwd();
+      const { config } = await loadConfigWithUser(root, logger);
+      await sync({
+        root,
+        config,
+        logger,
+        yes: opts?.yes
+      });
+      logger.info("Synchronized stack");
     });
 }

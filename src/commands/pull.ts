@@ -4,35 +4,30 @@ import { usesImplicitSource } from "../shared/config";
 import type { RepostackConfig } from "../shared/types";
 import { cloneRepo, pathExists } from "../shared/git";
 import { loadLock } from "../shared/lock";
+import type { Logger } from "logtra";
 
 export type PullOptions = {
-  onDebug?: (message: string) => void;
+  root: string;
+  config: RepostackConfig;
+  logger?: Logger;
   concurrency?: number;
   maxAttempts?: number;
   clone?: (source: string, destination: string) => Promise<void>;
-  onRepoStart?: (repo: string) => void;
-  onRepoDone?: (repo: string, attempts: number) => void;
-  onRepoRetry?: (repo: string, attempt: number, error: Error) => void;
-  onRepoFailed?: (repo: string, attempts: number, error: Error) => void;
 };
 
-export async function pull(
-  root: string,
-  config: RepostackConfig,
-  options: PullOptions = {},
-): Promise<void> {
-  const debug = options.onDebug ?? (() => {});
-  debug(`download: checking ${config.repos.length} repos`);
-  const lock = await loadLock(root, options);
-  const clone = options.clone ?? cloneRepo;
+export async function pull({ root, config, logger, ...options }: PullOptions): Promise<void> {
+  logger?.debug(`checking ${config.repos.length} repos`);
+
+  const lock = await loadLock(root, logger);
+  const cloneFn = options.clone ?? cloneRepo;
   const maxAttempts = Math.max(1, options.maxAttempts ?? 3);
   const pending: Array<{ name: string; source: string; destination: string }> = [];
 
   for (const repo of config.repos) {
     const destination = join(root, repo.path);
-    debug(`download: checking ${repo.name} at ${destination}`);
+    logger?.debug(`checking ${repo.name} at ${destination}`);
     if (await pathExists(destination)) {
-      debug(`download: ${repo.name} already exists, skipping`);
+      logger?.debug(`${repo.name} already exists, skipping`);
       continue;
     }
     const lockedSource = lock?.repos[repo.name]?.source;
@@ -49,30 +44,32 @@ export async function pull(
   let stopped = false;
 
   async function cloneWithRetry(task: { name: string; source: string; destination: string }) {
-    options.onRepoStart?.(task.name);
+    const spin = logger?.spin(`Cloning ${task.name}...`);
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
+        if (attempt > 1) {
+          spin?.update(`Cloning ${task.name}... (${attempt}/${maxAttempts})`);
+        }
         await mkdir(dirname(task.destination), { recursive: true });
-        debug(`download: cloning ${task.source} -> ${task.destination} (attempt ${attempt}/${maxAttempts})`);
-        await clone(task.source, task.destination);
-        debug(`download: cloned ${task.name} in ${attempt} attempt(s)`);
-        options.onRepoDone?.(task.name, attempt);
+        logger?.debug(`cloning ${task.source} -> ${task.destination} (attempt ${attempt}/${maxAttempts})`);
+        await cloneFn(task.source, task.destination);
+        logger?.debug(`cloned ${task.name} in ${attempt} attempt(s)`);
+        const suffix = attempt > 1 ? ` (${attempt} attempts)` : "";
+        spin?.done(`Cloned ${task.name}${suffix}`);
         return;
       } catch (error) {
         const normalized = error instanceof Error ? error : new Error(String(error));
         if (await pathExists(task.destination)) {
           await rm(task.destination, { recursive: true, force: true });
         }
-
         if (attempt === maxAttempts) {
-          options.onRepoFailed?.(task.name, attempt, normalized);
+          spin?.fail(`Clone failed: ${task.name} — ${normalized.message}`);
           throw normalized;
         }
-
-        const nextAttempt = attempt + 1;
-        debug(`download: retrying ${task.name} (${nextAttempt}/${maxAttempts}) after ${normalized.message}`);
-        options.onRepoRetry?.(task.name, nextAttempt, normalized);
+        logger?.debug(`retrying ${task.name} (${attempt + 1}/${maxAttempts}) after ${normalized.message}`);
+        spin?.update(`Retrying ${task.name}... (${attempt + 1}/${maxAttempts})`);
+        logger?.warn(`Retrying clone (${attempt + 1}/${maxAttempts}): ${task.name}`);
       }
     }
   }
@@ -81,11 +78,7 @@ export async function pull(
     while (!stopped) {
       const currentIndex = nextIndex;
       nextIndex += 1;
-
-      if (currentIndex >= pending.length) {
-        return;
-      }
-
+      if (currentIndex >= pending.length) return;
       try {
         await cloneWithRetry(pending[currentIndex]);
       } catch (error) {
