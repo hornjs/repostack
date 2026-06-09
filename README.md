@@ -21,7 +21,8 @@ Commands:
   whoami                  Show the current user
   users [command] [name]  Manage user configuration for this stack
   pull                    Clone repos that are declared but missing locally
-  sync                    Fetch and checkout revisions from the current lock file
+  sync                    Fetch and fast-forward repos to configured branch latest
+  restore                 Restore repos to revisions from the current lock file
   list                    Show the current branch, revision, and dirty state for each repo
   run [script]            Run a named script across selected repos
   snapshot                Write repostack.lock.yaml from current repo revisions
@@ -35,6 +36,7 @@ For more info, run any command with the `--help` flag:
   $ repostack users --help
   $ repostack pull --help
   $ repostack sync --help
+  $ repostack restore --help
   $ repostack list --help
   $ repostack run --help
   $ repostack snapshot --help

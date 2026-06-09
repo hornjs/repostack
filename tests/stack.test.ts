@@ -8,6 +8,7 @@ import { createInitialConfig, writeConfig } from "../src/shared/config";
 import { buildSnapshot, listRepos } from "../src/commands/snapshot";
 import { pull } from "../src/commands/pull";
 import { sync } from "../src/commands/sync";
+import { restore } from "../src/commands/restore";
 import { snapshot } from "../src/commands/snapshot";
 import { loadConfig } from "../src/shared/config";
 import { createRepoFixture, createTempDir } from "./helpers";
@@ -229,11 +230,110 @@ describe("stack state", () => {
       name: "evt",
       path: "evt",
       source: "git@example.com/evt.git",
-      branch: "main",
+      branch: "master",
     });
 
     const lock = await sync({ root, config, yes: true });
 
     expect(lock.repos.evt.revision).toMatch(/[0-9a-f]{7,40}/);
+  });
+
+  it("syncs to the latest configured branch instead of the lock revision", async () => {
+    const root = await createTempDir("repostack-sync-latest-");
+    const sourceRoot = await createTempDir("repostack-sync-latest-remote-");
+    const sourceRepo = await createRepoFixture(sourceRoot, "evt-src", "@hornjs/evt");
+    const bare = join(sourceRoot, "evt.git");
+
+    await execFileAsync("git", ["clone", "--bare", sourceRepo, bare]);
+    await execFileAsync("git", ["clone", bare, join(root, "evt")]);
+    const oldRevision = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: sourceRepo }).then(({ stdout }) => stdout.trim());
+
+    await execFileAsync("git", ["remote", "add", "origin", bare], { cwd: sourceRepo });
+    await writeFile(join(sourceRepo, "NEXT.md"), "next\n", "utf8");
+    await execFileAsync("git", ["add", "NEXT.md"], { cwd: sourceRepo });
+    await execFileAsync("git", ["commit", "-m", "next"], { cwd: sourceRepo });
+    await execFileAsync("git", ["push", "origin", "master"], { cwd: sourceRepo });
+    const latestRevision = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: sourceRepo }).then(({ stdout }) => stdout.trim());
+
+    const config = createInitialConfig();
+    config.repos.push({
+      name: "evt",
+      path: "evt",
+      source: bare,
+      branch: "master",
+    });
+    await writeConfig(join(root, "repostack.yaml"), config);
+    await writeFile(
+      join(root, "repostack.lock.yaml"),
+      YAML.stringify({
+        version: 1,
+        repos: {
+          evt: {
+            path: "evt",
+            source: bare,
+            branch: "master",
+            revision: oldRevision,
+          },
+        },
+      }),
+      "utf8",
+    );
+
+    const lock = await sync({ root, config, yes: true });
+    const currentRevision = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: join(root, "evt") }).then(({ stdout }) => stdout.trim());
+    const currentBranch = await execFileAsync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: join(root, "evt") }).then(({ stdout }) => stdout.trim());
+
+    expect(currentBranch).toBe("master");
+    expect(currentRevision).toBe(latestRevision);
+    expect(lock.repos.evt.revision).toBe(latestRevision);
+  });
+
+  it("restores repos to the lock revision", async () => {
+    const root = await createTempDir("repostack-restore-lock-");
+    const sourceRoot = await createTempDir("repostack-restore-lock-remote-");
+    const sourceRepo = await createRepoFixture(sourceRoot, "evt-src", "@hornjs/evt");
+    const bare = join(sourceRoot, "evt.git");
+
+    await execFileAsync("git", ["clone", "--bare", sourceRepo, bare]);
+    await execFileAsync("git", ["remote", "add", "origin", bare], { cwd: sourceRepo });
+    const lockedRevision = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: sourceRepo }).then(({ stdout }) => stdout.trim());
+
+    await writeFile(join(sourceRepo, "NEXT.md"), "next\n", "utf8");
+    await execFileAsync("git", ["add", "NEXT.md"], { cwd: sourceRepo });
+    await execFileAsync("git", ["commit", "-m", "next"], { cwd: sourceRepo });
+    await execFileAsync("git", ["push", "origin", "master"], { cwd: sourceRepo });
+    const latestRevision = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: sourceRepo }).then(({ stdout }) => stdout.trim());
+
+    await execFileAsync("git", ["clone", bare, join(root, "evt")]);
+
+    const config = createInitialConfig();
+    config.repos.push({
+      name: "evt",
+      path: "evt",
+      source: bare,
+      branch: "master",
+    });
+    await writeConfig(join(root, "repostack.yaml"), config);
+    await writeFile(
+      join(root, "repostack.lock.yaml"),
+      YAML.stringify({
+        version: 1,
+        repos: {
+          evt: {
+            path: "evt",
+            source: bare,
+            branch: "master",
+            revision: lockedRevision,
+          },
+        },
+      }),
+      "utf8",
+    );
+
+    await restore({ root, config, yes: true });
+    const currentRevision = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: join(root, "evt") }).then(({ stdout }) => stdout.trim());
+
+    expect(latestRevision).not.toBe(lockedRevision);
+    expect(currentRevision).toBe(lockedRevision);
   });
 });

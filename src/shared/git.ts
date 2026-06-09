@@ -42,6 +42,22 @@ export async function checkoutRevision(cwd: string, revision: string): Promise<v
   await execFileAsync("git", ["checkout", revision], { cwd });
 }
 
+export async function switchBranch(cwd: string, branch: string): Promise<void> {
+  try {
+    await execFileAsync("git", ["switch", branch], { cwd });
+  } catch (error) {
+    try {
+      await execFileAsync("git", ["switch", "--track", `origin/${branch}`], { cwd });
+    } catch {
+      throw error;
+    }
+  }
+}
+
+export async function fastForward(cwd: string, target: string): Promise<void> {
+  await execFileAsync("git", ["merge", "--ff-only", target], { cwd });
+}
+
 export async function fetchRepo(cwd: string): Promise<void> {
   await execFileAsync("git", ["fetch", "--all", "--tags"], { cwd });
 }
@@ -68,6 +84,23 @@ export async function getCurrentBranch(cwd: string): Promise<string> {
     return await git(cwd, ["rev-parse", "--abbrev-ref", "HEAD"]);
   } catch {
     return "(no commits)";
+  }
+}
+
+export async function getUpstreamRef(cwd: string, branch: string): Promise<string | null> {
+  try {
+    return await git(cwd, ["rev-parse", "--abbrev-ref", `${branch}@{upstream}`]);
+  } catch {
+    return null;
+  }
+}
+
+export async function refExists(cwd: string, ref: string): Promise<boolean> {
+  try {
+    await git(cwd, ["rev-parse", "--verify", ref]);
+    return true;
+  } catch {
+    return false;
   }
 }
 

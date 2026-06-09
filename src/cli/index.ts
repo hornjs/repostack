@@ -10,6 +10,7 @@ import { registerWhoami } from "./whoami";
 import { registerUsers } from "./users";
 import { registerPull } from "./pull";
 import { registerSync } from "./sync";
+import { registerRestore } from "./restore";
 import { registerList } from "./list";
 import { registerRun } from "./run";
 import { registerSnapshot } from "./snapshot";
@@ -52,6 +53,7 @@ function createCLI(ctx: CliContext): CAC {
   registerUsers(cli, ctx);
   registerPull(cli, ctx);
   registerSync(cli, ctx);
+  registerRestore(cli, ctx);
   registerList(cli, ctx);
   registerRun(cli, ctx);
   registerSnapshot(cli, ctx);
